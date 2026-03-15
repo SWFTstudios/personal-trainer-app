@@ -198,26 +198,11 @@ struct DiaryEntryDetailView: View {
     @ViewBuilder
     private var workoutSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Workout")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-                if let log = entry.workoutLog {
-                    workoutLogContent(log)
-                } else if let custom = entry.workoutCustomDescription, !custom.isEmpty {
-                    Text(custom)
-                        .font(AppTheme.Typography.body)
-                        .foregroundStyle(.primary)
-                } else if entry.workoutId != nil {
-                    Text(entry.workoutDisplayTitle ?? "Logged from your plan")
-                        .font(AppTheme.Typography.subheadline)
-                        .foregroundStyle(.primary)
-                }
+            if let log = entry.workoutLog, let presentation = WorkoutEntryPresentation.from(entry: entry, log: log) {
+                workoutSectionFromPresentation(presentation, log: log)
+            } else {
+                workoutSectionLegacy
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm))
             if let additional = entry.additionalWorkoutLogs, !additional.isEmpty {
                 ForEach(Array(additional.enumerated()), id: \.offset) { index, log in
                     VStack(alignment: .leading, spacing: 6) {
@@ -236,6 +221,134 @@ struct DiaryEntryDetailView: View {
     }
 
     @ViewBuilder
+    private func workoutSectionFromPresentation(_ presentation: WorkoutEntryPresentation, log: WorkoutLog) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header block: time range, workout title
+            VStack(alignment: .leading, spacing: 6) {
+                if !presentation.header.timeRange.isEmpty {
+                    Text(presentation.header.timeRange)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                if !presentation.header.title.isEmpty {
+                    Text(presentation.header.title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Exercise summary block
+            if !presentation.summaryRows.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(presentation.summaryRows.enumerated()), id: \.offset) { _, line in
+                        Text(line)
+                            .font(AppTheme.Typography.subheadline)
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // Round details block with visual hierarchy
+            if !presentation.roundSections.isEmpty {
+                roundsBlockView(presentation.roundSections)
+            }
+
+            // Cardio blocks (if any) from same log
+            if let blocks = log.blocks {
+                ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                    if case .cardio(let c) = block {
+                        cardioBlockDetail(c)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm))
+    }
+
+    @ViewBuilder
+    private func roundsBlockView(_ sections: [WorkoutRoundSection]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Rounds")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+            ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
+                roundSectionView(index: index, section: section)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func roundSectionView(index: Int, section: WorkoutRoundSection) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if index > 0 {
+                Divider()
+                    .padding(.vertical, 4)
+            }
+            Text("Round \(section.roundIndex)")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(Array(section.exerciseRows.enumerated()), id: \.offset) { _, row in
+                    Text(roundExerciseLine(row))
+                        .font(AppTheme.Typography.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm))
+        }
+    }
+
+    private func roundExerciseLine(_ row: WorkoutRoundExerciseRow) -> String {
+        let setLine = row.setSummaries.joined(separator: ", ")
+        return "\(row.exerciseName): \(setLine)"
+    }
+
+    @ViewBuilder
+    private var workoutSectionLegacy: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let timeRange = entry.workoutCustomDescription, !timeRange.isEmpty {
+                Text(timeRange)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if let title = entry.workoutDisplayTitle, !title.isEmpty {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+            } else if entry.workoutLog == nil {
+                Text("Workout")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+            }
+            if let log = entry.workoutLog {
+                workoutLogContent(log)
+            } else if let custom = entry.workoutCustomDescription, !custom.isEmpty {
+                Text(custom)
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(.primary)
+            } else if entry.workoutId != nil {
+                Text(entry.workoutDisplayTitle ?? "Logged from your plan")
+                    .font(AppTheme.Typography.subheadline)
+                    .foregroundStyle(.primary)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm))
+    }
+
+    @ViewBuilder
     private func workoutLogContent(_ log: WorkoutLog) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if let blocks = log.blocks, !blocks.isEmpty {
@@ -247,6 +360,9 @@ struct DiaryEntryDetailView: View {
                     case .cardio(let c):
                         cardioBlockDetail(c)
                     }
+                }
+                if workoutLogHasRoundsWeights(log), effectiveRoundsCount(log) > 0 {
+                    roundsWeightsSubsection(log: log)
                 }
             } else {
                 Text(typeLabel(log.type))
@@ -270,6 +386,61 @@ struct DiaryEntryDetailView: View {
                     Text(custom)
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(.primary)
+                }
+            }
+        }
+    }
+
+    private func workoutLogHasRoundsWeights(_ log: WorkoutLog) -> Bool {
+        guard let blocks = log.blocks else { return false }
+        return blocks.contains { block in
+            if case .strength(let ex) = block, let rounds = ex.roundsData, !rounds.isEmpty {
+                return rounds.contains { !$0.isEmpty }
+            }
+            return false
+        }
+    }
+
+    private func effectiveRoundsCount(_ log: WorkoutLog) -> Int {
+        if let r = log.rounds, r > 0 { return r }
+        guard let blocks = log.blocks else { return 0 }
+        for block in blocks {
+            if case .strength(let ex) = block, let rounds = ex.roundsData, !rounds.isEmpty {
+                return rounds.count
+            }
+        }
+        return 0
+    }
+
+    @ViewBuilder
+    private func roundsWeightsSubsection(log: WorkoutLog) -> some View {
+        if let blocks = log.blocks {
+            let roundsCount = effectiveRoundsCount(log)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Rounds")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+                ForEach(0..<roundsCount, id: \.self) { roundIndex in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Round \(roundIndex + 1)")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                            if case .strength(let ex) = block,
+                               let roundsData = ex.roundsData,
+                               roundIndex < roundsData.count,
+                               !roundsData[roundIndex].isEmpty {
+                                let setWeights = roundsData[roundIndex].enumerated().map { idx, record in
+                                    "Set \(idx + 1) \(record.displayString)"
+                                }.joined(separator: ", ")
+                                Text("\(ex.customName ?? "Exercise"): \(setWeights)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
             }
         }

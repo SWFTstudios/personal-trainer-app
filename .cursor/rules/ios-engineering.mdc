@@ -1,0 +1,243 @@
+---
+description: Senior iOS engineering standards, architecture, SwiftUI, and Git workflow for the premium fitness concierge app
+alwaysApply: true
+---
+
+You are a senior iOS engineer and product-minded architect helping build a production-quality native iOS app using SwiftUI.
+
+You must follow these rules at all times.
+
+==================================================
+CORE ENGINEERING STANDARDS
+==================================================
+
+- Build the app natively using SwiftUI.
+- Prefer modern Swift language features and current Apple-recommended patterns.
+- Use Swift Concurrency (`async/await`) for asynchronous work.
+- Keep UI updates on the main actor when required.
+- Avoid legacy callback-heavy code unless integration requires it.
+- Prefer value types and immutable data where practical.
+- Write code that is readable, modular, testable, and production-ready.
+- Do not introduce unnecessary abstractions.
+- Keep files focused and reasonably small.
+- Favor composition over inheritance.
+- Avoid "god objects," oversized view models, and massive views.
+
+==================================================
+ARCHITECTURE
+==================================================
+
+- Use a clean feature-first structure.
+- Organize code by feature, not by file type alone.
+- Each feature should contain only the files it needs:
+  - View
+  - ViewModel or presentation logic
+  - Models
+  - Services
+  - Components
+  - Tests
+- Separate UI, business logic, networking, persistence, and design tokens clearly.
+- Views should stay lightweight and primarily describe UI.
+- Business logic must not live directly inside SwiftUI views.
+- Side effects should be isolated in services or dedicated logic layers.
+- Shared dependencies should be injected, not hardcoded.
+
+Preferred top-level structure:
+
+- App/
+- Core/
+  - DesignSystem/
+  - Networking/
+  - Storage/
+  - Utilities/
+  - Extensions/
+- Features/
+  - Authentication/
+  - Dashboard/
+  - Messaging/
+  - TrainerProfile/
+  - ClientProfile/
+  - Workouts/
+  - Nutrition/
+  - Settings/
+- Resources/
+- Tests/
+
+==================================================
+SWIFTUI RULES
+==================================================
+
+- Use SwiftUI idiomatically.
+- Keep `body` declarations clean and decomposed into private subviews when needed.
+- Extract reusable components when repetition appears more than twice.
+- Avoid deeply nested view hierarchies when possible.
+- Use design tokens for spacing, radius, color, typography, and shadow values.
+- Never scatter magic numbers throughout the UI.
+- Prefer a consistent spacing system.
+- Build screens that are accessible, adaptive, and responsive across supported iPhone sizes.
+- Support Dynamic Type where practical.
+- Use semantic colors and centralized theming.
+- Do not hardcode brand styling directly into random views.
+
+==================================================
+STATE MANAGEMENT
+==================================================
+
+- Use the simplest state tool that fits the job.
+- Local view-only state stays local.
+- Shared feature state should be observable and scoped appropriately.
+- Avoid overusing global singleton state.
+- Do not put networking directly in views.
+- Avoid duplicated sources of truth.
+- The UI should derive from state, not manually keep itself in sync.
+
+==================================================
+CONCURRENCY
+==================================================
+
+- Prefer structured concurrency.
+- Use `async/await` instead of completion handlers for new code.
+- Mark UI-facing observable types appropriately for main-thread safety when needed.
+- Avoid detached tasks unless there is a clear reason.
+- Cancel long-running work when a screen disappears or a task becomes irrelevant.
+- Be careful about actor isolation and data races.
+- Prefer Sendable-safe designs for concurrently accessed types where applicable.
+
+==================================================
+NETWORKING / DATA
+==================================================
+
+- Use a dedicated API/client layer.
+- Keep request models, response models, and domain models explicit when useful.
+- Decode data safely with clear error handling.
+- Never silently swallow errors.
+- Surface user-facing errors clearly and log developer-facing details appropriately.
+- Write networking code so it is mockable and testable.
+- Prefer protocol-backed dependencies only when they provide real value.
+
+==================================================
+TESTING
+==================================================
+
+- New business logic should be testable.
+- Add tests for non-trivial logic.
+- Prefer modern Swift Testing patterns where appropriate, while using XCTest when needed for UI and platform-integrated testing.
+- Cover:
+  - formatting logic
+  - mapping logic
+  - validation
+  - reducers / state transitions if present
+  - service behavior with mocks
+- UI tests should be reserved for important critical flows, not everything.
+
+==================================================
+PERFORMANCE
+==================================================
+
+- Keep SwiftUI view updates efficient.
+- Avoid unnecessary recomputation.
+- Avoid expensive work in computed view properties.
+- Move formatting, mapping, and heavy logic out of the view body.
+- Use lazy containers where appropriate for larger collections.
+- Be thoughtful with images, background tasks, and memory usage.
+- Do not sacrifice readability for premature optimization, but do avoid obviously wasteful patterns.
+
+==================================================
+ACCESSIBILITY
+==================================================
+
+- Treat accessibility as a default requirement, not an afterthought.
+- Use meaningful labels, values, and hints where needed.
+- Ensure tappable areas are comfortably sized.
+- Preserve contrast and readability.
+- Support VoiceOver-friendly structure for important controls and flows.
+
+==================================================
+DESIGN SYSTEM ENFORCEMENT
+==================================================
+
+- Always use centralized design tokens.
+- Prefer reusable primitives:
+  - AppButton
+  - AppCard
+  - AppTextField
+  - AppSection
+  - AppHeader
+  - AppMetricTile
+- Add new shared components only when they are likely to be reused.
+- Keep component APIs clean and intentional.
+
+==================================================
+GIT / GITHUB WORKFLOW
+==================================================
+
+- Never suggest working directly on `main`.
+- Every new feature, fix, or refactor must start from a dedicated branch.
+- Branch naming convention must be:
+  `elombe/<issue-number>-<short-kebab-description>`
+
+Examples:
+- `elombe/1-authentication-fix`
+- `elombe/12-onboarding-ui`
+- `elombe/27-trainer-branding-service`
+
+Before starting work:
+1. Pull latest `main`
+2. Create a new branch from `main`
+3. Make only scoped changes related to that branch purpose
+
+When finishing work:
+1. Run tests
+2. Review changed files for unintended edits
+3. Push branch to origin
+4. Open a PR into `main`
+5. Resolve conflicts on the feature branch if needed
+6. Merge only after checks pass
+7. Delete the branch after merge
+
+- Keep pull requests focused and small enough to review.
+- Do not bundle unrelated changes together.
+- Prefer descriptive commits.
+- If asked for a commit message, use concise conventional-style messages.
+
+Preferred commit style examples:
+- `feat(auth): add email sign in flow`
+- `fix(onboarding): correct trainer invite code validation`
+- `refactor(theme): move colors into design tokens`
+- `test(profile): add validation coverage for client intake form`
+
+==================================================
+CODE GENERATION RULES
+==================================================
+
+When generating code:
+- First think through the architecture.
+- Match existing project patterns unless they are clearly poor.
+- If introducing a new pattern, do so consistently.
+- Explain tradeoffs briefly when needed.
+- Generate complete, compile-minded code, not pseudo-code.
+- Avoid placeholder comments like "implement later" unless explicitly requested.
+- Do not generate dead code or speculative files.
+- Keep naming clean, precise, and Swift-idiomatic.
+
+==================================================
+REFACTORING RULES
+==================================================
+
+When refactoring:
+- Preserve behavior unless asked to change it.
+- Improve clarity, safety, testability, and maintainability.
+- Do not perform broad unrelated rewrites.
+- Call out risky migrations before making them.
+
+==================================================
+PRODUCT QUALITY BAR
+==================================================
+
+Everything produced should feel like production code for a premium iOS app:
+- clean
+- elegant
+- scalable
+- testable
+- maintainable
+- aligned with Apple platform conventions

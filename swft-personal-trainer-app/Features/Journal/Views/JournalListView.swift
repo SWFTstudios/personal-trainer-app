@@ -1,4 +1,5 @@
 //
+//
 //  JournalListView.swift
 //  swft-personal-trainer-app
 //
@@ -110,6 +111,9 @@ struct JournalListView: View {
         }
         .refreshable { await load() }
         .task(id: selectedDate) { await load() }
+        .onReceive(NotificationCenter.default.publisher(for: .journalDidAddEntry)) { _ in
+            Task { await load() }
+        }
         .onAppear {
             if weekSlider.isEmpty {
                 let currentWeek = Date().fetchWeek()
@@ -473,15 +477,28 @@ private struct DiaryEntryRow: View {
     }
 
     /// Workout summary as groups (title + lines) for the card. Each group can show a bold title and exercise lines.
+    /// Prefer full workoutLog over workoutCustomDescription so entries with both show name + exercises + time.
     private var workoutSummaryGroups: [(title: String?, lines: [String])]? {
         var groups: [(title: String?, lines: [String])] = []
-        if let custom = entry.workoutCustomDescription, !custom.isEmpty {
+        if let log = entry.workoutLog {
+            let lines = workoutLogSummaryLines(log)
+            let title = entry.workoutDisplayTitle?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? entry.workoutDisplayTitle
+                : nil
+            var displayLines: [String] = []
+            if let timeRange = entry.workoutCustomDescription?.trimmingCharacters(in: .whitespacesAndNewlines), !timeRange.isEmpty {
+                displayLines.append(timeRange)
+            }
+            displayLines.append(contentsOf: lines)
+            if workoutLogHasRoundsWeights(log) {
+                let roundCount = log.rounds ?? 1
+                displayLines.append(roundCount > 1 ? "\(roundCount) rounds · weights logged" : "Weights logged")
+            }
+            groups.append((title, displayLines))
+        } else if let custom = entry.workoutCustomDescription, !custom.isEmpty {
             let trimmed = custom.trimmingCharacters(in: .whitespacesAndNewlines)
             let title = trimmed.hasPrefix("Pre-made: ") ? String(trimmed.dropFirst("Pre-made: ".count)) : trimmed
             groups.append((title, []))
-        } else if let log = entry.workoutLog {
-            let lines = workoutLogSummaryLines(log)
-            groups.append((nil, lines))
         } else if let wid = entry.workoutId, let saved = CustomWorkoutStore.entry(id: wid) {
             let blockLines = blockSummaryLines(saved.blocks)
             groups.append((saved.name, blockLines))
@@ -505,16 +522,27 @@ private struct DiaryEntryRow: View {
         return groups.isEmpty ? nil : groups
     }
 
-    /// One line per block (strength or cardio) for journal card summaries.
+    /// One line per block (strength or cardio) for journal card summaries. Uses shared formatter: "Name — sets × reps".
     private func blockSummaryLines(_ blocks: [WorkoutLogBlock]) -> [String] {
         blocks.compactMap { block -> String? in
             switch block {
             case .strength(let ex):
                 let name = (ex.customName?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? "Exercise"
-                return "\(name) · \(ex.sets)×\(ex.reps)"
+                return WorkoutDisplayHelpers.exerciseSummaryLine(name: name, sets: ex.sets, reps: ex.reps)
             case .cardio(let c):
                 return cardioSummaryLine(c)
             }
+        }
+    }
+
+    /// True when any strength block has per-round weight data.
+    private func workoutLogHasRoundsWeights(_ log: WorkoutLog) -> Bool {
+        guard let blocks = log.blocks else { return false }
+        return blocks.contains { block in
+            if case .strength(let ex) = block, let rounds = ex.roundsData, !rounds.isEmpty {
+                return rounds.contains { !$0.isEmpty }
+            }
+            return false
         }
     }
 
@@ -534,7 +562,7 @@ private struct DiaryEntryRow: View {
             if let exs = log.exercises, !exs.isEmpty {
                 return exs.map { ex in
                     let name = (ex.customName?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? "Exercise"
-                    return "\(name) · \(ex.sets)×\(ex.reps)"
+                    return WorkoutDisplayHelpers.exerciseSummaryLine(name: name, sets: ex.sets, reps: ex.reps)
                 }
             }
             return ["Weight"]
