@@ -1,0 +1,21 @@
+# Supabase local config (optional). For production, create project at supabase.com and run migrations via SQL Editor or CLI.
+
+[api]
+enabled = true
+port = 54321
+scheme = "http"
+
+[db]
+port = 54322
+shadow_port = 54320
+
+[storage]
+enabled = true
+
+[storage.buckets]
+# Bucket for trainer logos and journal photos — create in Dashboard or via API
+# Name: assets (or logos + journal-photos as separate buckets)
+# Public: logos yes (for UI); journal-photos no (private, signed URLs)
+
+[auth]
+enabled = true

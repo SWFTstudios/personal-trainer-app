@@ -11,7 +11,7 @@ import SwiftUI
 struct swft_personal_trainer_appApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
         }
     }
 }
