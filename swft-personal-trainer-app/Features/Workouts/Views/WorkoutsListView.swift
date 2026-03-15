@@ -48,12 +48,6 @@ struct WorkoutsListView: View {
                 Task { await load() }
             }
         }
-        .navigationDestination(for: WorkoutTemplate.self) { template in
-            WorkoutTemplateDetailView(template: template)
-        }
-        .navigationDestination(for: Workout.self) { workout in
-            WorkoutDetailView(workout: workout, client: client, workoutService: workoutService)
-        }
     }
 
     private var templateList: some View {
@@ -63,6 +57,11 @@ struct WorkoutsListView: View {
                     NavigationLink(value: template) {
                         AppCard {
                             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                                WorkoutThumbnailView(
+                                    thumbnailUrl: template.thumbnailUrl,
+                                    hasVideo: template.videoUrl != nil,
+                                    height: 160
+                                )
                                 Text(template.title)
                                     .font(AppTheme.Typography.headline)
                                 Text(template.shortDescription)

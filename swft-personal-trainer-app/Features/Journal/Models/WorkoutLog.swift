@@ -100,20 +100,58 @@ struct CardioLog: Codable {
     }
 }
 
+/// Weight unit for a set (when not body weight).
+enum WeightUnit: String, Codable, CaseIterable {
+    case lb
+    case kg
+}
+
+/// Per-set weight record for journal: nil = not recorded, "BW" = body weight, else numeric string; unit only when numeric.
+struct SetWeightRecord: Codable, Equatable {
+    /// nil = not set, "BW" = body weight, otherwise numeric string (e.g. "225").
+    var weight: String?
+    /// "lb" or "kg"; only meaningful when weight is numeric.
+    var unit: WeightUnit?
+
+    init(weight: String? = nil, unit: WeightUnit? = nil) {
+        self.weight = weight
+        self.unit = unit
+    }
+
+    /// Display string for journal list and detail: "—", "BW", "30 LBS", "20 KG". Uses shared formatter for consistency.
+    var displayString: String {
+        WorkoutDisplayHelpers.weightDisplayString(for: self)
+    }
+}
+
 /// Single exercise in a strength workout log: either from trainer (exerciseId) or custom (customName).
+/// When present, `roundsData` holds per-round, per-set weight: roundsData[roundIndex][setIndex].
 struct StrengthExerciseLog: Codable, Identifiable {
     let id: UUID
     var exerciseId: UUID?
     var customName: String?
     var sets: Int
     var reps: String
+    /// Optional per-round, per-set weight: [round][set]. Enables full history and "previous workout" display.
+    var roundsData: [[SetWeightRecord]]?
 
-    init(id: UUID = UUID(), exerciseId: UUID? = nil, customName: String? = nil, sets: Int, reps: String) {
+    init(id: UUID = UUID(), exerciseId: UUID? = nil, customName: String? = nil, sets: Int, reps: String, roundsData: [[SetWeightRecord]]? = nil) {
         self.id = id
         self.exerciseId = exerciseId
         self.customName = customName
         self.sets = sets
         self.reps = reps
+        self.roundsData = roundsData
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        exerciseId = try c.decodeIfPresent(UUID.self, forKey: .exerciseId)
+        customName = try c.decodeIfPresent(String.self, forKey: .customName)
+        sets = try c.decode(Int.self, forKey: .sets)
+        reps = try c.decode(String.self, forKey: .reps)
+        roundsData = try c.decodeIfPresent([[SetWeightRecord]].self, forKey: .roundsData)
     }
 }
 

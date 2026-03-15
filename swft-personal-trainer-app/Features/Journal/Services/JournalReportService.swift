@@ -82,6 +82,37 @@ final class JournalReportService {
             drawBody(rangeStr)
             y += lineHeight
 
+            func drawWorkoutEntry(entry: DiaryEntry, log: WorkoutLog, drawBody: (String) -> Void) {
+                guard let presentation = WorkoutEntryPresentation.from(entry: entry, log: log) else {
+                    if let summary = workoutLogSummary(log), !summary.isEmpty {
+                        drawBody("  Workout: \(summary)")
+                    }
+                    return
+                }
+                if !presentation.header.timeRange.isEmpty {
+                    drawBody("  \(presentation.header.timeRange)")
+                }
+                if !presentation.header.title.isEmpty {
+                    drawBody("  \(presentation.header.title)")
+                }
+                for line in presentation.summaryRows {
+                    drawBody("  \(line)")
+                }
+                for section in presentation.roundSections {
+                    drawBody("  Round \(section.roundIndex)")
+                    for row in section.exerciseRows {
+                        let setLine = row.setSummaries.joined(separator: ", ")
+                        drawBody("    \(row.exerciseName): \(setLine)")
+                    }
+                }
+            }
+
+            func drawWorkoutLogAsBody(_ log: WorkoutLog, drawBody: (String) -> Void) {
+                if let summary = workoutLogSummary(log), !summary.isEmpty {
+                    drawBody("  Workout: \(summary)")
+                }
+            }
+
             let groupedByDate = Dictionary(grouping: entries, by: { $0.date }).sorted { $0.key < $1.key }
             for (dateStr, dayEntries) in groupedByDate {
                 drawSection(dateStr)
@@ -101,17 +132,15 @@ final class JournalReportService {
                     } else if entry.imagePath != nil {
                         drawBody("  [Photo]\(entry.imageCaption.map { " – \($0)" } ?? "")")
                     }
-                    if let log = entry.workoutLog, let summary = workoutLogSummary(log), !summary.isEmpty {
-                        drawBody("  Workout: \(summary)")
+                    if let log = entry.workoutLog {
+                        drawWorkoutEntry(entry: entry, log: log, drawBody: drawBody)
                     } else if let custom = entry.workoutCustomDescription, !custom.isEmpty {
                         drawBody("  Workout: \(custom)")
                     } else if entry.workoutId != nil {
                         drawBody("  Workout: \(entry.workoutDisplayTitle ?? "Logged from plan")")
                     }
                     for log in entry.additionalWorkoutLogs ?? [] {
-                        if let summary = workoutLogSummary(log), !summary.isEmpty {
-                            drawBody("  Workout: \(summary)")
-                        }
+                        drawWorkoutLogAsBody(log, drawBody: drawBody)
                     }
                     y += lineHeight * 0.5
                 }
@@ -121,13 +150,13 @@ final class JournalReportService {
         return data
     }
 
-    private static func workoutLogSummary(_ log: WorkoutLog) -> String? {
+    private nonisolated static func workoutLogSummary(_ log: WorkoutLog) -> String? {
         if let blocks = log.blocks, !blocks.isEmpty {
-            let parts = blocks.prefix(3).compactMap { block -> String? in
+            let parts = blocks.prefix(5).compactMap { block -> String? in
                 switch block {
                 case .strength(let ex):
                     let name = (ex.customName?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? "Exercise"
-                    return "\(name) \(ex.sets)×\(ex.reps)"
+                    return WorkoutDisplayHelpers.exerciseSummaryLine(name: name, sets: ex.sets, reps: ex.reps)
                 case .cardio(let c):
                     return cardioSummaryLineForReport(c)
                 }
@@ -144,12 +173,15 @@ final class JournalReportService {
             }
         }
         if let exs = log.exercises, !exs.isEmpty {
-            return "\(exs.count) exercises"
+            return exs.map { ex in
+                let name = (ex.customName?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? "Exercise"
+                return WorkoutDisplayHelpers.exerciseSummaryLine(name: name, sets: ex.sets, reps: ex.reps)
+            }.joined(separator: ", ")
         }
         return nil
     }
 
-    private static func cardioSummaryLineForReport(_ c: CardioLog) -> String {
+    private nonisolated static func cardioSummaryLineForReport(_ c: CardioLog) -> String {
         let title = (c.title?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? c.activityType?.defaultTitle
         var parts: [String] = []
         parts.append(title ?? "Cardio")

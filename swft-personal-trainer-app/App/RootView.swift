@@ -11,10 +11,8 @@ struct RootView: View {
     var body: some View {
         Group {
             if AppConfig.skipAuthAndShowHome {
-                NavigationStack {
-                    ClientTabView(client: MockData.client, trainer: MockData.trainer, appState: appState)
-                        .environment(\.brandTheme, MockData.trainer.brandTheme)
-                }
+                ClientTabView(client: MockData.client, trainer: MockData.trainer, appState: appState)
+                    .environment(\.brandTheme, MockData.trainer.brandTheme)
             } else if appState.isLoading {
                 ProgressView("Loading…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -41,10 +39,8 @@ struct RootView: View {
                 await appState.finishOnboarding()
             }
         case .client(let client, let trainer):
-            NavigationStack {
-                ClientTabView(client: client, trainer: trainer, appState: appState)
-                    .environment(\.brandTheme, trainer.brandTheme)
-            }
+            ClientTabView(client: client, trainer: trainer, appState: appState)
+                .environment(\.brandTheme, trainer.brandTheme)
         case .trainer(let trainer):
             TrainerDashboardView(trainer: trainer, appState: appState)
         }

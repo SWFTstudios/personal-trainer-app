@@ -28,6 +28,11 @@ struct JournalEntry: Codable, Sendable, Identifiable {
     }
 }
 
+extension Notification.Name {
+    /// Posted when a diary entry is added (e.g. from workout stop) so journal UI can refresh.
+    static let journalDidAddEntry = Notification.Name("journalDidAddEntry")
+}
+
 @MainActor
 final class JournalService: Sendable {
     private let client = SupabaseClientManager.shared
