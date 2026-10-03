@@ -15,8 +15,7 @@
     {
       "binding": "DB",
       "database_name": "trainer-kit",
-      // Replace with the id from `wrangler d1 create trainer-kit`
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "57351e65-3156-4290-9746-034a8a028743",
       "migrations_dir": "migrations"
     }
   ],
