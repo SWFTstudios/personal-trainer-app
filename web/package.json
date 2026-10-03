@@ -12,7 +12,8 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv --include-runtime=false cloudflare-env.d.ts",
     "db:migrate:local": "wrangler d1 migrations apply trainer-kit --local",
-    "db:migrate": "wrangler d1 migrations apply trainer-kit --remote"
+    "db:migrate": "wrangler d1 migrations apply trainer-kit --remote",
+    "vapid": "node scripts/vapid.mjs"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.8",

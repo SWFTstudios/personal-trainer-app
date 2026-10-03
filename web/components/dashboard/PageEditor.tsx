@@ -3,16 +3,17 @@
 import { useState, useTransition } from "react";
 import { savePage } from "@/app/dashboard/cms-actions";
 import type { Block } from "@/lib/cms/blocks";
-import { BlockEditor } from "./BlockEditor";
+import { BlockEditor, type VideoOptions } from "./BlockEditor";
 import type { MediaItem } from "./MediaPicker";
 
 type Props = {
   page: { id: string; path: string; title: string; seo_description: string | null; published: boolean; show_in_nav: boolean; blocks: Block[] };
   siteBase: string | null;
   library: MediaItem[];
+  videoOptions: VideoOptions;
 };
 
-export function PageEditor({ page, siteBase, library: initialLibrary }: Props) {
+export function PageEditor({ page, siteBase, library: initialLibrary, videoOptions }: Props) {
   const isHome = page.path === "";
   const [title, setTitle] = useState(page.title);
   const [path, setPath] = useState(page.path);
@@ -43,7 +44,7 @@ export function PageEditor({ page, siteBase, library: initialLibrary }: Props) {
 
   return (
     <div className="stack">
-      <div className="row spread" style={{ position: "sticky", top: 0, background: "var(--bg)", padding: "8px 0", zIndex: 5 }}>
+      <div className="row spread sticky-bar">
         <h1 style={{ margin: 0 }}>{title || "Untitled"}</h1>
         <div className="row">
           {status.saved && !dirty && <span className="muted small">Saved</span>}
@@ -85,6 +86,7 @@ export function PageEditor({ page, siteBase, library: initialLibrary }: Props) {
         onChange={touch(setBlocks)}
         library={library}
         onUploaded={(item) => setLibrary((l) => [item, ...l])}
+        videoOptions={videoOptions}
       />
     </div>
   );

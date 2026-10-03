@@ -4,7 +4,7 @@ export const PLANS: Record<Plan, { name: string; priceMonthly: number; features:
   starter: {
     name: "Starter",
     priceMonthly: 29,
-    features: ["Website with pages, blog and media library", "Online booking + calendar", "Card payments via Stripe", "Client intake form + client list"],
+    features: ["Branded client app + website", "Video library, uploads & social import", "Live alerts + workout feedback", "Booking, payments & intake forms"],
   },
   pro: {
     name: "Pro",

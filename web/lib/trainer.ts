@@ -2,13 +2,13 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
-import { first, newId, run } from "@/lib/db";
+import { first } from "@/lib/db";
 import { hasActiveSubscription } from "@/lib/plans";
 import { toTrainer } from "@/lib/rows";
 import type { PublicTrainer, Trainer } from "@/lib/types";
 
 export const RESERVED_SLUGS = new Set([
-  "dashboard", "login", "signup", "logout", "auth", "api", "admin", "media", "pricing", "app", "www", "_next",
+  "dashboard", "login", "signup", "logout", "auth", "api", "admin", "media", "pricing", "app", "www", "_next", "sw.js", "favicon.ico",
 ]);
 
 export const getTrainerBySlug = cache(async (slug: string): Promise<Trainer | null> => {
@@ -23,14 +23,10 @@ export const getPublishedTrainer = cache(async (slug: string): Promise<PublicTra
   return trainer as PublicTrainer;
 });
 
-/** The signed-in user's trainer row, created on first use. */
+/** The signed-in user's trainer account. Member-only accounts are sent back to the homepage. */
 export const requireTrainer = cache(async (): Promise<Trainer> => {
   const user = await requireUser();
-  let row = await first<Parameters<typeof toTrainer>[0]>("SELECT * FROM trainers WHERE user_id = ?", user.id);
-  if (!row) {
-    await run("INSERT INTO trainers (id, user_id) VALUES (?, ?)", newId(), user.id);
-    row = await first("SELECT * FROM trainers WHERE user_id = ?", user.id);
-  }
-  if (!row) redirect("/login");
+  const row = await first<Parameters<typeof toTrainer>[0]>("SELECT * FROM trainers WHERE user_id = ?", user.id);
+  if (!row) redirect("/login?error=" + encodeURIComponent("That account isn't a trainer account. Members sign in from their coach's app."));
   return toTrainer(row);
 });

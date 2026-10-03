@@ -3,14 +3,17 @@
 import { BLOCK_LABELS, newBlock, type Block, type BlockType } from "@/lib/cms/blocks";
 import { MediaPicker, type MediaItem } from "./MediaPicker";
 
+export type VideoOptions = { collections: { id: string; name: string }[]; categories: string[] };
+
 type Props = {
   blocks: Block[];
   onChange: (blocks: Block[]) => void;
   library: MediaItem[];
   onUploaded: (item: MediaItem) => void;
+  videoOptions?: VideoOptions;
 };
 
-export function BlockEditor({ blocks, onChange, library, onUploaded }: Props) {
+export function BlockEditor({ blocks, onChange, library, onUploaded, videoOptions = { collections: [], categories: [] } }: Props) {
   const update = (id: string, patch: Partial<Block>) =>
     onChange(blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as Block) : b)));
   const move = (i: number, d: -1 | 1) => {
@@ -36,7 +39,7 @@ export function BlockEditor({ blocks, onChange, library, onUploaded }: Props) {
             </div>
           </header>
           <div className="stack">
-            <BlockFields block={b} update={(patch) => update(b.id, patch)} media={media} />
+            <BlockFields block={b} update={(patch) => update(b.id, patch)} media={media} videoOptions={videoOptions} />
           </div>
         </div>
       ))}
@@ -56,6 +59,7 @@ type FieldsProps = {
   block: Block;
   update: (patch: Partial<Block>) => void;
   media: { library: MediaItem[]; onUploaded: (item: MediaItem) => void };
+  videoOptions: VideoOptions;
 };
 
 function Text({ label, value, onChange, multiline, hint }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean; hint?: string }) {
@@ -74,7 +78,7 @@ function Text({ label, value, onChange, multiline, hint }: { label: string; valu
 
 const MD_HINT = "Supports ## headings, - lists, **bold**, *italic* and [links](https://…)";
 
-function BlockFields({ block: b, update, media }: FieldsProps) {
+function BlockFields({ block: b, update, media, videoOptions }: FieldsProps) {
   switch (b.type) {
     case "hero":
       return (
@@ -150,6 +154,37 @@ function BlockFields({ block: b, update, media }: FieldsProps) {
           <Text label="Heading" value={b.heading} onChange={(heading) => update({ heading })} />
           <Text label="Text" value={b.body} onChange={(body) => update({ body })} multiline />
           <Text label="Button label" value={b.button_label} onChange={(button_label) => update({ button_label })} />
+        </>
+      );
+    case "videos":
+      return (
+        <>
+          <Text label="Heading" value={b.heading} onChange={(heading) => update({ heading })} />
+          <div>
+            <label>Show</label>
+            <select value={b.source} onChange={(e) => update({ source: e.target.value as typeof b.source, value: "" })}>
+              <option value="latest">Latest public videos</option>
+              <option value="collection">A collection</option>
+              <option value="category">A category</option>
+            </select>
+          </div>
+          {b.source === "collection" && (
+            <select aria-label="Collection" value={b.value} onChange={(e) => update({ value: e.target.value })}>
+              <option value="">Choose a collection…</option>
+              {videoOptions.collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+          {b.source === "category" && (
+            <select aria-label="Category" value={b.value} onChange={(e) => update({ value: e.target.value })}>
+              <option value="">Choose a category…</option>
+              {videoOptions.categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          <div>
+            <label>How many</label>
+            <input type="number" min={1} max={24} value={b.limit} onChange={(e) => update({ limit: Math.max(1, Math.min(24, Number(e.target.value) || 6)) })} />
+          </div>
+          <p className="muted small" style={{ margin: 0 }}>Only videos set to “Everyone” appear on your website.</p>
         </>
       );
     case "gallery":

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandStyle, normalizeHex } from "./brand";
+import { accentFor, brandStyle, contrast, normalizeHex } from "./brand";
 import { computeSlots, weekdayOf } from "./slots";
 
 const NY = "America/New_York";
@@ -50,11 +50,24 @@ describe("computeSlots", () => {
 });
 
 describe("brand", () => {
-  it("normalizes hex and picks readable text", () => {
+  it("normalizes hex", () => {
     expect(normalizeHex("1F6F5C")).toBe("#1f6f5c");
     expect(normalizeHex("red")).toBeNull();
-    expect(brandStyle("#ffffff")).toMatchObject({ "--accent-text": "#111111" });
-    expect(brandStyle("#000000")).toMatchObject({ "--accent-text": "#ffffff" });
     expect(brandStyle("javascript:alert(1)")).toEqual({});
+  });
+
+  it("keeps the accent at 3:1 contrast in both themes", () => {
+    for (const hex of ["#ffffff", "#ffe600", "#000000", "#1f2a44", "#e11d48"]) {
+      expect(contrast(accentFor(hex, "#f7f7f5"), "#f7f7f5")).toBeGreaterThanOrEqual(3);
+      expect(contrast(accentFor(hex, "#0e0e11"), "#0e0e11")).toBeGreaterThanOrEqual(3);
+    }
+    expect(accentFor("#1f6f5c", "#f7f7f5")).toBe("#1f6f5c"); // already fine: untouched
+  });
+
+  it("picks readable button text and maps style options", () => {
+    const s = brandStyle({ accent_color_hex: "#ffe600", font_style: "athletic", corner_style: "sharp" }) as Record<string, string>;
+    expect(s["--brand-dark-text"]).toBe("#111111");
+    expect(s["--font-display"]).toBe("var(--font-condensed)");
+    expect(s["--radius-scale"]).toBe("0.12");
   });
 });

@@ -1,46 +1,30 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ThemeDefault } from "@/components/ui/ThemeToggle";
 import { brandStyle } from "@/lib/brand";
-import { productName } from "@/lib/env";
-import { getSiteChrome } from "@/lib/site";
 import { getPublishedTrainer } from "@/lib/trainer";
 
-export default async function TrainerSiteLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const trainer = await getPublishedTrainer(slug);
-  if (!trainer) notFound();
-  const { nav, services } = await getSiteChrome(trainer.id, trainer.slug);
+type Props = { children: React.ReactNode; params: Promise<{ slug: string }> };
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const trainer = await getPublishedTrainer((await params).slug);
+  if (!trainer) return {};
+  const name = trainer.display_name ?? "Personal training";
+  return {
+    manifest: `/${trainer.slug}/manifest.webmanifest`,
+    appleWebApp: { capable: true, title: name, statusBarStyle: "default" },
+    icons: { apple: trainer.logo_url ?? `/${trainer.slug}/icon`, icon: trainer.logo_url ?? `/${trainer.slug}/icon` },
+  };
+}
+
+/** Applies the trainer's brand (colors, fonts, corners, default theme) to everything under /<slug>. */
+export default async function TrainerBrandLayout({ children, params }: Props) {
+  const trainer = await getPublishedTrainer((await params).slug);
+  if (!trainer) notFound();
   return (
-    <div style={brandStyle(trainer.accent_color_hex)}>
-      <header className="site-header">
-        <div className="container row spread">
-          <Link href={`/${trainer.slug}`} className="row" style={{ textDecoration: "none" }}>
-            {trainer.logo_url && <img className="logo" src={trainer.logo_url} alt="" />}
-            <strong>{trainer.display_name}</strong>
-          </Link>
-          <nav className="site-nav">
-            {nav.map((n) => <Link key={n.href} href={n.href}>{n.label}</Link>)}
-            {services.length > 0 && <Link className="btn btn-sm" href={`/${trainer.slug}/book`}>Book</Link>}
-          </nav>
-        </div>
-      </header>
+    <div className="brand" style={brandStyle(trainer)}>
+      <ThemeDefault theme={trainer.theme_default} />
       {children}
-      <footer className="site-footer muted small">
-        <div className="container stack">
-          <div className="row" style={{ justifyContent: "center" }}>
-            {trainer.location && <span>{trainer.location}</span>}
-            {trainer.instagram_url && <a href={trainer.instagram_url} rel="noopener noreferrer" target="_blank">Instagram</a>}
-          </div>
-          {trainer.plan !== "pro" && <div>Powered by <a href="/">{productName()}</a></div>}
-        </div>
-      </footer>
     </div>
   );
 }

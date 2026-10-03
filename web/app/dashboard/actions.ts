@@ -10,12 +10,13 @@ import { first, isDbError, newId, nowIso, run, setClause } from "@/lib/db";
 import { siteUrl } from "@/lib/env";
 import { hasActiveSubscription, priceIdFor, TRIAL_DAYS } from "@/lib/plans";
 import { stripe } from "@/lib/stripe";
+import { SOCIAL_LABELS, safeHttpsUrl } from "@/lib/social";
 import { requireTrainer, RESERVED_SLUGS } from "@/lib/trainer";
+import { SOCIAL_PLATFORMS } from "@/lib/types";
 import type { Plan } from "@/lib/types";
 
 const text = (max: number) => z.string().trim().max(max).transform((v) => v || null);
 const optionalImage = imageUrl.transform((v) => v || null);
-const httpsUrl = z.union([z.literal(""), z.url({ protocol: /^https$/ }).max(500)]).transform((v) => v || null);
 
 function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -31,12 +32,14 @@ const SiteForm = z.object({
   headline: text(140),
   bio: text(4000),
   location: text(120),
-  instagram_url: httpsUrl,
   logo_url: optionalImage,
   hero_image_url: optionalImage,
   accent_color_hex: z.string().transform((v) => normalizeHex(v)),
   timezone: z.string().refine((tz) => Intl.supportedValuesOf("timeZone").includes(tz) || tz === "UTC", "Unknown timezone"),
   site_published: z.boolean(),
+  theme_default: z.enum(["system", "light", "dark"]),
+  font_style: z.enum(["modern", "editorial", "athletic"]),
+  corner_style: z.enum(["rounded", "soft", "sharp"]),
 });
 
 export async function saveSite(formData: FormData) {
@@ -45,7 +48,16 @@ export async function saveSite(formData: FormData) {
   if (!parsed.success) fail("/dashboard/site", parsed.error.issues[0].message);
   if (RESERVED_SLUGS.has(parsed.data.slug)) fail("/dashboard/site", "That link is reserved. Try another.");
 
-  const { sql, params } = setClause({ ...parsed.data, updated_at: nowIso() });
+  const social: Record<string, string> = {};
+  for (const platform of SOCIAL_PLATFORMS) {
+    const raw = String(formData.get(`social_${platform}`) ?? "").trim();
+    if (!raw) continue;
+    const url = safeHttpsUrl(raw, platform);
+    if (!url) fail("/dashboard/site", `${SOCIAL_LABELS[platform]} link must be an https link to ${SOCIAL_LABELS[platform]}.`);
+    social[platform] = url;
+  }
+
+  const { sql, params } = setClause({ ...parsed.data, social_links: JSON.stringify(social), updated_at: nowIso() });
   try {
     await run(`UPDATE trainers SET ${sql} WHERE id = ?`, ...params, trainer.id);
   } catch (e) {

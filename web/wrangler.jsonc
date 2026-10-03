@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "trainer-kit",
-  "main": ".open-next/worker.js",
+  "main": "worker.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
@@ -9,6 +9,8 @@
     "binding": "ASSETS"
   },
   "observability": { "enabled": true },
+  // Auto-sync connected YouTube/Vimeo channels (see worker.ts)
+  "triggers": { "crons": ["*/30 * * * *"] },
   "d1_databases": [
     {
       "binding": "DB",
@@ -31,5 +33,7 @@
     "PLATFORM_FEE_BPS": "0"
   }
   // Secrets (wrangler secret put): STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
-  // STRIPE_PRICE_STARTER, STRIPE_PRICE_PRO, ADMIN_EMAILS
+  // STRIPE_PRICE_STARTER, STRIPE_PRICE_PRO, ADMIN_EMAILS,
+  // VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (push; `npm run vapid`),
+  // optional YOUTUBE_API_KEY, VIMEO_ACCESS_TOKEN (full channel imports)
 }

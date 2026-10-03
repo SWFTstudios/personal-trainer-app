@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Blocks } from "@/components/site/Blocks";
 import { defaultHomeBlocks } from "@/lib/cms/blocks";
@@ -24,5 +25,14 @@ export default async function TrainerHome({ params }: Props) {
   if (!trainer) notFound();
   const [page, { services }] = await Promise.all([getPublishedPage(trainer.id, ""), getSiteChrome(trainer.id, trainer.slug)]);
   const blocks = page?.blocks.length ? page.blocks : defaultHomeBlocks(trainer);
-  return <main><Blocks blocks={blocks} ctx={{ trainer, services }} /></main>;
+  return (
+    <main>
+      <Blocks blocks={blocks} ctx={{ trainer, services }} />
+      {services.length > 0 && (
+        <div className="sticky-cta">
+          <Link className="btn btn-block" href={`/${trainer.slug}/book`}>Book a session</Link>
+        </div>
+      )}
+    </main>
+  );
 }

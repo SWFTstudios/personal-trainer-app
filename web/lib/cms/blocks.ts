@@ -34,6 +34,14 @@ export const BlockSchema = z.discriminatedUnion("type", [
     heading: text(160),
     images: z.array(z.object({ url: imageUrl, alt: text(200) })).max(40).default([]),
   }),
+  z.object({
+    id,
+    type: z.literal("videos"),
+    heading: text(160),
+    source: z.enum(["latest", "collection", "category"]).default("latest"),
+    value: text(100),
+    limit: z.number().int().min(1).max(24).default(6),
+  }),
 ]);
 
 export const BlocksSchema = z.array(BlockSchema).max(60);
@@ -51,6 +59,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   faq: "FAQ",
   cta: "Book-now banner",
   gallery: "Photo gallery",
+  videos: "Videos",
 };
 
 export function newBlock(type: BlockType): Block {
@@ -72,6 +81,8 @@ export function newBlock(type: BlockType): Block {
       return { id, type, heading: "Ready to start?", body: "", button_label: "Book now" };
     case "gallery":
       return { id, type, heading: "", images: [] };
+    case "videos":
+      return { id, type, heading: "Free training tips", source: "latest", value: "", limit: 6 };
   }
 }
 
@@ -89,5 +100,5 @@ export function defaultHomeBlocks(profile: { display_name: string | null; headli
   return blocks;
 }
 
-export const RESERVED_PAGE_PATHS = new Set(["book", "blog", "media"]);
+export const RESERVED_PAGE_PATHS = new Set(["book", "blog", "media", "app", "icon", "manifest.webmanifest"]);
 export const PAGE_PATH_RE = /^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/;

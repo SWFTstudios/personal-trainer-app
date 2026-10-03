@@ -1,14 +1,19 @@
 import type { Block } from "@/lib/cms/blocks";
-import type { Booking, IntakeQuestion, Service, Trainer } from "@/lib/types";
+import type { Booking, IntakeQuestion, Service, Trainer, Video, Workout } from "@/lib/types";
 
 // D1 returns SQLite booleans as 0/1 and JSON columns as text; these map rows to app types.
 type Raw<T, K extends keyof T> = Omit<T, K> & { [P in K]: unknown };
 
-export const toTrainer = (r: Raw<Trainer, "site_published" | "stripe_charges_enabled">): Trainer => ({
+export const toTrainer = (r: Raw<Trainer, "site_published" | "stripe_charges_enabled" | "social_links">): Trainer => ({
   ...r,
   site_published: Boolean(r.site_published),
   stripe_charges_enabled: Boolean(r.stripe_charges_enabled),
+  social_links: parseJson(r.social_links, {}),
 });
+
+export const toVideo = (r: Raw<Video, "published">): Video => ({ ...r, published: Boolean(r.published) });
+
+export const toWorkout = (r: Raw<Workout, "exercises">): Workout => ({ ...r, exercises: parseJson(r.exercises, []) });
 
 export const toService = (r: Raw<Service, "active">): Service => ({ ...r, active: Boolean(r.active) });
 

@@ -40,6 +40,11 @@ export async function signIn(formData: FormData) {
   const user = await first<{ id: string; password_hash: string }>("SELECT id, password_hash FROM users WHERE email = ?", email);
   const ok = await verifyPassword(password, user?.password_hash ?? DUMMY_HASH);
   if (!user || !ok) fail();
+  const isTrainer = await first("SELECT id FROM trainers WHERE user_id = ?", user!.id);
+  if (!isTrainer) {
+    // A member account: add a trainer profile on top so the same login works for both.
+    await run("INSERT INTO trainers (id, user_id) VALUES (?, ?)", newId(), user!.id);
+  }
   await createSession(user!.id);
   redirect("/dashboard");
 }

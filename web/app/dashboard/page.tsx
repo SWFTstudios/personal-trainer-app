@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookingsTable } from "@/components/dashboard/BookingsTable";
+import { Icon } from "@/components/ui/Icon";
 import { all, first } from "@/lib/db";
 import { formatMoney } from "@/lib/format";
 import { hasActiveSubscription } from "@/lib/plans";
@@ -26,10 +27,13 @@ export default async function OverviewPage() {
        FROM bookings WHERE trainer_id = ?3`,
       nowIso, monthStart, trainer.id,
     ),
-    first<{ services: number; rules: number; pages: number }>(
+    first<{ services: number; rules: number; pages: number; videos: number; members: number; pending: number }>(
       `SELECT (SELECT COUNT(*) FROM services WHERE trainer_id = ?1 AND active = 1) AS services,
               (SELECT COUNT(*) FROM availability_rules WHERE trainer_id = ?1) AS rules,
-              (SELECT COUNT(*) FROM pages WHERE trainer_id = ?1 AND published = 1) AS pages`,
+              (SELECT COUNT(*) FROM pages WHERE trainer_id = ?1 AND published = 1) AS pages,
+              (SELECT COUNT(*) FROM videos WHERE trainer_id = ?1) AS videos,
+              (SELECT COUNT(*) FROM members WHERE trainer_id = ?1) AS members,
+              (SELECT COUNT(*) FROM workouts WHERE trainer_id = ?1 AND status = 'submitted') AS pending`,
       trainer.id,
     ),
   ]);
@@ -38,7 +42,8 @@ export default async function OverviewPage() {
     { done: Boolean(trainer.slug && trainer.display_name), label: "Add your name and site link", href: "/dashboard/site" },
     { done: (counts?.services ?? 0) > 0, label: "Add a session type", href: "/dashboard/services" },
     { done: (counts?.rules ?? 0) > 0, label: "Set your weekly hours", href: "/dashboard/availability" },
-    { done: (counts?.pages ?? 0) > 0, label: "Design your home page (optional)", href: "/dashboard/pages" },
+    { done: (counts?.videos ?? 0) > 0, label: "Add your first video tip", href: "/dashboard/videos" },
+    { done: Object.keys(trainer.social_links).length > 0, label: "Add your social channels", href: "/dashboard/site" },
     { done: hasActiveSubscription(trainer.subscription_status), label: "Start your plan", href: "/dashboard/billing" },
     { done: trainer.stripe_charges_enabled, label: "Connect Stripe to get paid", href: "/dashboard/billing" },
     { done: trainer.site_published, label: "Publish your site", href: "/dashboard/site" },
@@ -46,13 +51,30 @@ export default async function OverviewPage() {
 
   return (
     <>
-      <h1>Overview</h1>
-      <div className="grid">
+      <div>
+        <p className="muted small" style={{ margin: 0 }}>Welcome back</p>
+        <h1 style={{ margin: 0 }}>{trainer.display_name ?? "Overview"}</h1>
+      </div>
+
+      <div className="grid-2">
+        <Link href="/dashboard/live" className="card tile">
+          <Icon name="live" style={{ color: "var(--live)" }} />
+          <strong>Go live</strong>
+          <span className="small muted">Notify {counts?.members ?? 0} member{counts?.members === 1 ? "" : "s"}</span>
+        </Link>
+        <Link href="/dashboard/workouts" className="card tile">
+          <Icon name="chat" style={{ color: "var(--accent)" }} />
+          <strong>{counts?.pending ?? 0} to review</strong>
+          <span className="small muted">Client workouts</span>
+        </Link>
+      </div>
+
+      <div className="grid-2">
         {[
           ["Upcoming sessions", String(stats?.upcoming ?? 0)],
-          ["Booked this month", String(stats?.month_bookings ?? 0)],
           ["Revenue this month", formatMoney(stats?.month_revenue ?? 0).replace("Free", "$0")],
-          ["Clients", String(stats?.clients ?? 0)],
+          ["App members", String(counts?.members ?? 0)],
+          ["Booking clients", String(stats?.clients ?? 0)],
         ].map(([label, value]) => (
           <div key={label} className="card"><p className="muted small" style={{ margin: 0 }}>{label}</p><p className="stat">{value}</p></div>
         ))}
@@ -61,7 +83,7 @@ export default async function OverviewPage() {
       {checklist.some((c) => !c.done) && (
         <div className="card stack">
           <h2>Get set up</h2>
-          <ol style={{ margin: 0, paddingLeft: 20 }}>
+          <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
             {checklist.map((c) => (
               <li key={c.label} className={c.done ? "muted" : undefined}>
                 {c.done ? <s>{c.label}</s> : <Link href={c.href}>{c.label}</Link>}

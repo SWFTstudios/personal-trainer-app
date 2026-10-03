@@ -62,4 +62,26 @@ describe("D1 schema", () => {
              DELETE FROM users WHERE id = 'u1';`);
     expect(db.prepare("SELECT COUNT(*) AS c FROM posts").get()).toEqual({ c: 0 });
   });
+
+  it("supports members across trainers, collections and cascades for the client app", () => {
+    db.exec(`INSERT INTO users (id, email, password_hash) VALUES ('u2', 'sam@x.com', 'h'), ('u3', 'coach2@x.com', 'h');
+             INSERT INTO trainers (id, user_id, slug) VALUES ('t2', 'u3', 'coach2');
+             INSERT INTO members (id, trainer_id, user_id, display_name) VALUES ('m1', 't1', 'u2', 'Sam'), ('m2', 't2', 'u2', 'Sam');`);
+    expect(() => db.exec("INSERT INTO members (id, trainer_id, user_id, display_name) VALUES ('m3', 't1', 'u2', 'Sam again')")).toThrow(/UNIQUE/);
+
+    db.exec(`INSERT INTO videos (id, trainer_id, provider, provider_id, url, title) VALUES ('v1', 't1', 'upload', 'videos/t1/a.mp4', '/media/videos/t1/a.mp4', 'Squat tips');
+             INSERT INTO collections (id, trainer_id, name) VALUES ('c1', 't1', 'Beginner'), ('c2', 't1', 'Legs');
+             INSERT INTO video_collections (video_id, collection_id) VALUES ('v1', 'c1'), ('v1', 'c2');`);
+    expect(() => db.exec("INSERT INTO videos (id, trainer_id, provider, provider_id, url, title) VALUES ('v2', 't1', 'upload', 'videos/t1/a.mp4', 'x', 'dupe')")).toThrow(/UNIQUE/);
+    expect(() => db.exec("INSERT INTO videos (id, trainer_id, provider, provider_id, url, title) VALUES ('v3', 't1', 'myspace', 'x', 'x', 'x')")).toThrow(/CHECK/);
+    db.exec("DELETE FROM collections WHERE id = 'c1'");
+    expect(db.prepare("SELECT COUNT(*) AS c FROM video_collections").get()).toEqual({ c: 1 });
+
+    db.exec(`INSERT INTO workouts (id, member_id, trainer_id, title, performed_on) VALUES ('w1', 'm1', 't1', 'Legs', '2026-10-01');
+             INSERT INTO workout_comments (id, workout_id, author, body) VALUES ('wc1', 'w1', 'trainer', 'Nice');`);
+    expect(() => db.exec("INSERT INTO workouts (id, member_id, trainer_id, title, performed_on, effort) VALUES ('w2', 'm1', 't1', 'x', '2026-10-01', 11)")).toThrow(/CHECK/);
+    db.exec("DELETE FROM members WHERE id = 'm1'");
+    expect(db.prepare("SELECT (SELECT COUNT(*) FROM workouts) + (SELECT COUNT(*) FROM workout_comments) AS c").get()).toEqual({ c: 0 });
+  });
 });
+

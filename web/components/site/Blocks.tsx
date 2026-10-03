@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { Block } from "@/lib/cms/blocks";
 import { Markdown } from "@/lib/cms/markdown";
 import { formatDuration, formatMoney } from "@/lib/format";
+import { getVideos } from "@/lib/app-data";
+import { VideoPlayer } from "@/components/app/VideoPlayer";
+import type { BlockOf } from "@/lib/cms/blocks";
 import type { PublicTrainer, Service } from "@/lib/types";
 
 type Ctx = { trainer: PublicTrainer; services: Service[] };
@@ -108,6 +111,8 @@ function BlockView({ block: b, ctx }: { block: Block; ctx: Ctx }) {
           </div>
         </section>
       );
+    case "videos":
+      return <VideosBlock block={b} trainerId={ctx.trainer.id} />;
     case "gallery": {
       const images = b.images.filter((i) => i.url);
       if (images.length === 0) return null;
@@ -121,4 +126,28 @@ function BlockView({ block: b, ctx }: { block: Block; ctx: Ctx }) {
       );
     }
   }
+}
+
+/** Public videos (visibility "public") from the latest uploads, a collection or a category. */
+async function VideosBlock({ block: b, trainerId }: { block: BlockOf<"videos">; trainerId: string }) {
+  const videos = await getVideos(trainerId, {
+    publicOnly: true,
+    limit: b.limit,
+    collectionId: b.source === "collection" && b.value ? b.value : undefined,
+    category: b.source === "category" && b.value ? b.value : undefined,
+  });
+  if (videos.length === 0) return null;
+  return (
+    <section className="container section">
+      {b.heading && <h2>{b.heading}</h2>}
+      <div className="grid">
+        {videos.map((v) => (
+          <div key={v.id} className="stack-sm">
+            <VideoPlayer provider={v.provider === "upload" ? "file" : v.provider} id={v.provider === "upload" ? v.url : v.provider_id} title={v.title} thumbnail={v.thumbnail_url} />
+            <strong>{v.title}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
