@@ -1,42 +1,36 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/session";
+import { first, newId, run } from "@/lib/db";
 import { hasActiveSubscription } from "@/lib/plans";
+import { toTrainer } from "@/lib/rows";
 import type { PublicTrainer, Trainer } from "@/lib/types";
 
-const PUBLIC_COLUMNS =
-  "id, slug, display_name, headline, bio, logo_url, hero_image_url, accent_color_hex, location, instagram_url, timezone, plan, stripe_account_id, stripe_charges_enabled, site_published, subscription_status";
+export const RESERVED_SLUGS = new Set([
+  "dashboard", "login", "signup", "logout", "auth", "api", "admin", "media", "pricing", "app", "www", "_next",
+]);
 
-export const RESERVED_SLUGS = new Set(["dashboard", "login", "logout", "auth", "api", "pricing", "admin", "app", "www"]);
+export const getTrainerBySlug = cache(async (slug: string): Promise<Trainer | null> => {
+  const row = await first<Parameters<typeof toTrainer>[0]>("SELECT * FROM trainers WHERE slug = ?", slug.toLowerCase());
+  return row ? toTrainer(row) : null;
+});
 
 /** A trainer whose site is live: published with an active or trialing subscription. */
 export const getPublishedTrainer = cache(async (slug: string): Promise<PublicTrainer | null> => {
-  const { data } = await createAdminClient()
-    .from("trainers")
-    .select(PUBLIC_COLUMNS)
-    .eq("slug", slug.toLowerCase())
-    .maybeSingle();
-  if (!data || !data.site_published || !hasActiveSubscription(data.subscription_status)) return null;
-  const { site_published: _p, subscription_status: _s, ...trainer } = data;
+  const trainer = await getTrainerBySlug(slug);
+  if (!trainer?.slug || !trainer.site_published || !hasActiveSubscription(trainer.subscription_status)) return null;
   return trainer as PublicTrainer;
 });
 
-/** The signed-in trainer, creating their trainer row on first visit. */
+/** The signed-in user's trainer row, created on first use. */
 export const requireTrainer = cache(async (): Promise<Trainer> => {
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) redirect("/login");
-
-  const { data: existing } = await supabase.from("trainers").select("*").eq("user_id", auth.user.id).maybeSingle();
-  if (existing) return existing as Trainer;
-
-  const { data: created, error } = await supabase
-    .from("trainers")
-    .insert({ user_id: auth.user.id })
-    .select("*")
-    .single();
-  if (error) throw error;
-  return created as Trainer;
+  const user = await requireUser();
+  let row = await first<Parameters<typeof toTrainer>[0]>("SELECT * FROM trainers WHERE user_id = ?", user.id);
+  if (!row) {
+    await run("INSERT INTO trainers (id, user_id) VALUES (?, ?)", newId(), user.id);
+    row = await first("SELECT * FROM trainers WHERE user_id = ?", user.id);
+  }
+  if (!row) redirect("/login");
+  return toTrainer(row);
 });

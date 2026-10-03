@@ -31,6 +31,13 @@ export function weekdayOf(date: string): number {
   return new Date(`${date}T00:00:00Z`).getUTCDay();
 }
 
+/** Whether a booking still holds its slot: confirmed, or pending with an unexpired hold. */
+export function isLive(b: { status: string; hold_expires_at: string | null }, now: Date): boolean {
+  if (b.status === "confirmed") return true;
+  if (b.status !== "pending_payment") return false;
+  return !b.hold_expires_at || new Date(b.hold_expires_at) > now;
+}
+
 function overlaps(a: Interval, b: Interval): boolean {
   return a.start < b.end && b.start < a.end;
 }

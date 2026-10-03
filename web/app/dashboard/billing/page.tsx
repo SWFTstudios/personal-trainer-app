@@ -1,6 +1,6 @@
 import { hasActiveSubscription, PLANS, TRIAL_DAYS } from "@/lib/plans";
 import { stripe } from "@/lib/stripe";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { run } from "@/lib/db";
 import { requireTrainer } from "@/lib/trainer";
 import { connectStripe, openBillingPortal, openPayoutDashboard, startSubscription } from "../actions";
 import { Notice } from "../Notice";
@@ -17,7 +17,7 @@ export default async function BillingPage({ searchParams }: Props) {
     const account = await stripe().accounts.retrieve(trainer.stripe_account_id);
     if (account.charges_enabled) {
       chargesEnabled = true;
-      await createAdminClient().from("trainers").update({ stripe_charges_enabled: true }).eq("id", trainer.id);
+      await run("UPDATE trainers SET stripe_charges_enabled = 1 WHERE id = ?", trainer.id);
     }
   }
 

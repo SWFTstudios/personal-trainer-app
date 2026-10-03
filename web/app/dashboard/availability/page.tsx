@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { all } from "@/lib/db";
 import { requireTrainer } from "@/lib/trainer";
 import type { AvailabilityRule } from "@/lib/types";
 import { addAvailability, deleteAvailability } from "../actions";
@@ -16,9 +16,7 @@ type Props = { searchParams: Promise<{ error?: string }> };
 export default async function AvailabilityPage({ searchParams }: Props) {
   const { error } = await searchParams;
   const trainer = await requireTrainer();
-  const supabase = await createClient();
-  const { data } = await supabase.from("availability_rules").select("*").eq("trainer_id", trainer.id).order("weekday").order("start_time");
-  const rules = (data ?? []) as AvailabilityRule[];
+  const rules = await all<AvailabilityRule>("SELECT * FROM availability_rules WHERE trainer_id = ? ORDER BY weekday, start_time", trainer.id);
 
   return (
     <>

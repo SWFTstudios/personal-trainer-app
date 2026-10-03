@@ -6,14 +6,18 @@ export default function Home() {
   return (
     <main>
       <section className="container hero narrow">
+        <div className="row spread" style={{ marginBottom: 32 }}>
+          <strong>{productName()}</strong>
+          <Link href="/login" className="small">Sign in</Link>
+        </div>
         <p className="muted small">For independent personal trainers</p>
         <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.2rem)" }}>Your site, your calendar, paid up front.</h1>
         <p className="muted" style={{ fontSize: "1.15rem" }}>
-          {productName} gives you a branded landing page, online booking, card payments and a client intake form
+          {productName()} gives you a website you edit yourself, online booking, card payments and a client intake form
           in one link you can put in your bio. Set up in an afternoon.
         </p>
         <div className="row">
-          <Link className="btn" href="/login">Start {TRIAL_DAYS}-day free trial</Link>
+          <Link className="btn" href="/signup">Start {TRIAL_DAYS}-day free trial</Link>
           <a className="btn btn-ghost" href="#pricing">See pricing</a>
         </div>
       </section>
@@ -21,7 +25,7 @@ export default function Home() {
       <section className="container" style={{ paddingBottom: 48 }}>
         <div className="grid">
           {[
-            ["Landing page", "Your name, photo, bio and services on a clean page at yourname link."],
+            ["Your website", "Drag-and-drop pages, a blog and a photo library. Your brand color, logo and link."],
             ["Booking", "Clients pick a session and a time from your weekly availability. No back-and-forth."],
             ["Payments", "Clients pay when they book. Money goes straight to your Stripe account."],
             ["Intake", "Ask about goals, injuries and experience before the first session."],
@@ -46,7 +50,7 @@ export default function Home() {
               <ul className="muted">
                 {plan.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
-              <Link className="btn" href="/login">Start free trial</Link>
+              <Link className="btn" href="/signup">Start free trial</Link>
             </div>
           ))}
         </div>

@@ -39,7 +39,7 @@ export function BookingFlow({ slug, timeZone, services, questions, initialServic
     setSlots(null);
     setSlot("");
     fetch(`/api/slots?${new URLSearchParams({ slug, serviceId, date })}`)
-      .then((r) => (r.ok ? r.json() : { slots: [] }))
+      .then((r) => (r.ok ? (r.json() as Promise<{ slots: string[] }>) : { slots: [] }))
       .then((d) => !cancelled && setSlots(d.slots))
       .catch(() => !cancelled && setSlots([]));
     return () => {
@@ -66,9 +66,9 @@ export function BookingFlow({ slug, timeZone, services, questions, initialServic
           answers,
         }),
       });
-      const body = await res.json();
+      const body = (await res.json()) as { redirectUrl?: string; error?: string };
       if (!res.ok) throw new Error(body.error ?? "Something went wrong.");
-      window.location.assign(body.redirectUrl);
+      window.location.assign(body.redirectUrl!);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setSubmitting(false);

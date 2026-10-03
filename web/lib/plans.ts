@@ -4,12 +4,12 @@ export const PLANS: Record<Plan, { name: string; priceMonthly: number; features:
   starter: {
     name: "Starter",
     priceMonthly: 29,
-    features: ["Branded landing page", "Online booking + calendar", "Card payments via Stripe", "Client intake form"],
+    features: ["Website with pages, blog and media library", "Online booking + calendar", "Card payments via Stripe", "Client intake form + client list"],
   },
   pro: {
     name: "Pro",
     priceMonthly: 49,
-    features: ["Everything in Starter", "Remove platform branding", "Priority support", "Client app access (iOS)"],
+    features: ["Everything in Starter", "Remove platform branding", "Priority support"],
   },
 };
 

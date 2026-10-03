@@ -1,5 +1,6 @@
 import { formatDuration, formatMoney } from "@/lib/format";
-import { createClient } from "@/lib/supabase/server";
+import { all } from "@/lib/db";
+import { toService } from "@/lib/rows";
 import { requireTrainer } from "@/lib/trainer";
 import type { Service } from "@/lib/types";
 import { createService, deleteService, updateService } from "../actions";
@@ -34,9 +35,8 @@ function ServiceFields({ service }: { service?: Service }) {
 export default async function ServicesPage({ searchParams }: Props) {
   const { error } = await searchParams;
   const trainer = await requireTrainer();
-  const supabase = await createClient();
-  const { data } = await supabase.from("services").select("*").eq("trainer_id", trainer.id).order("sort_order").order("created_at");
-  const services = (data ?? []) as Service[];
+  const rows = await all<Parameters<typeof toService>[0]>("SELECT * FROM services WHERE trainer_id = ? ORDER BY sort_order, created_at", trainer.id);
+  const services: Service[] = rows.map(toService);
 
   return (
     <>

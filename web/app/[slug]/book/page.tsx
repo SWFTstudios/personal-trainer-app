@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getActiveServices } from "@/lib/booking";
+import { all, first, run } from "@/lib/db";
+import { toQuestion } from "@/lib/rows";
 import { stripe } from "@/lib/stripe";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublishedTrainer } from "@/lib/trainer";
-import type { IntakeQuestion, Service } from "@/lib/types";
 import { BookingFlow } from "./BookingFlow";
 
 type Props = {
@@ -17,25 +18,24 @@ export default async function BookPage({ params, searchParams }: Props) {
   const trainer = await getPublishedTrainer(slug);
   if (!trainer) notFound();
 
-  const admin = createAdminClient();
   if (cancelled) {
     // Client backed out of checkout: close the session and free the slot right away.
-    const { data: released } = await admin
-      .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", cancelled)
-      .eq("trainer_id", trainer.id)
-      .eq("status", "pending_payment")
-      .select("stripe_checkout_session_id")
-      .maybeSingle();
-    if (released?.stripe_checkout_session_id) {
-      await stripe().checkout.sessions.expire(released.stripe_checkout_session_id).catch(() => undefined);
+    const held = await first<{ stripe_checkout_session_id: string | null }>(
+      "SELECT stripe_checkout_session_id FROM bookings WHERE id = ? AND trainer_id = ? AND status = 'pending_payment'",
+      cancelled,
+      trainer.id,
+    );
+    if (held) {
+      await run("UPDATE bookings SET status = 'cancelled' WHERE id = ? AND status = 'pending_payment'", cancelled);
+      if (held.stripe_checkout_session_id) {
+        await stripe().checkout.sessions.expire(held.stripe_checkout_session_id).catch(() => undefined);
+      }
     }
   }
 
-  const [{ data: services }, { data: questions }] = await Promise.all([
-    admin.from("services").select("*").eq("trainer_id", trainer.id).eq("active", true).order("sort_order").order("created_at"),
-    admin.from("intake_questions").select("*").eq("trainer_id", trainer.id).order("sort_order").order("created_at"),
+  const [services, questions] = await Promise.all([
+    getActiveServices(trainer.id),
+    all<Parameters<typeof toQuestion>[0]>("SELECT * FROM intake_questions WHERE trainer_id = ? ORDER BY sort_order", trainer.id),
   ]);
 
   return (
@@ -46,8 +46,8 @@ export default async function BookPage({ params, searchParams }: Props) {
       <BookingFlow
         slug={slug}
         timeZone={trainer.timezone}
-        services={(services ?? []) as Service[]}
-        questions={(questions ?? []) as IntakeQuestion[]}
+        services={services}
+        questions={questions.map(toQuestion)}
         initialServiceId={serviceId}
       />
     </main>

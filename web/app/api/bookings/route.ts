@@ -5,10 +5,10 @@ import { z } from "zod";
 import { availableSlots, getActiveService } from "@/lib/booking";
 import { env, siteUrl } from "@/lib/env";
 import { formatSlot } from "@/lib/format";
+import { all, isDbError, newId, run } from "@/lib/db";
+import { toQuestion } from "@/lib/rows";
 import { stripe } from "@/lib/stripe";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublishedTrainer } from "@/lib/trainer";
-import type { IntakeQuestion } from "@/lib/types";
 
 // Stripe requires checkout sessions to live at least 30 minutes.
 const CHECKOUT_TTL_MINUTES = 30;
@@ -45,14 +45,12 @@ export async function POST(request: NextRequest) {
     return error("That time was just taken. Please pick another.", 409);
   }
 
-  const admin = createAdminClient();
-  const { data: questions } = await admin
-    .from("intake_questions")
-    .select("*")
-    .eq("trainer_id", trainer.id)
-    .order("sort_order");
+  const questions = await all<Parameters<typeof toQuestion>[0]>(
+    "SELECT * FROM intake_questions WHERE trainer_id = ? ORDER BY sort_order",
+    trainer.id,
+  );
   const intake: { question: string; answer: string }[] = [];
-  for (const q of (questions ?? []) as IntakeQuestion[]) {
+  for (const q of questions.map(toQuestion)) {
     const answer = (input.answers[q.id] ?? "").trim();
     if (q.required && !answer) return error(`Please answer: ${q.label}`, 400);
     if (answer && q.kind === "select" && !q.options.includes(answer)) return error(`Invalid answer for: ${q.label}`, 400);
@@ -65,37 +63,36 @@ export async function POST(request: NextRequest) {
     return error("Online payments aren't set up for this trainer yet.", 409);
   }
 
-  await admin.rpc("release_expired_holds", { p_trainer_id: trainer.id });
-
   const now = new Date();
-  const { data: booking, error: insertError } = await admin
-    .from("bookings")
-    .insert({
-      trainer_id: trainer.id,
-      service_id: service.id,
-      service_name: service.name,
-      client_name: input.name,
-      client_email: input.email,
-      client_phone: input.phone || null,
-      starts_at: start.toISOString(),
-      ends_at: addMinutes(start, service.duration_minutes).toISOString(),
-      status: isPaid ? "pending_payment" : "confirmed",
-      hold_expires_at: isPaid ? addMinutes(now, CHECKOUT_TTL_MINUTES + HOLD_GRACE_MINUTES).toISOString() : null,
-      amount_cents: service.price_cents,
-      currency: service.currency,
-      intake_answers: intake,
-    })
-    .select("id")
-    .single();
-
-  if (insertError) {
-    // 23P01 = exclusion violation: someone else grabbed an overlapping slot.
-    if (insertError.code === "23P01") return error("That time was just taken. Please pick another.", 409);
-    console.error("booking insert failed", insertError);
+  const bookingId = newId();
+  try {
+    await run(
+      `INSERT INTO bookings (id, trainer_id, service_id, service_name, client_name, client_email, client_phone,
+         starts_at, ends_at, status, hold_expires_at, amount_cents, currency, intake_answers)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      bookingId,
+      trainer.id,
+      service.id,
+      service.name,
+      input.name,
+      input.email,
+      input.phone || null,
+      start.toISOString(),
+      addMinutes(start, service.duration_minutes).toISOString(),
+      isPaid ? "pending_payment" : "confirmed",
+      isPaid ? addMinutes(now, CHECKOUT_TTL_MINUTES + HOLD_GRACE_MINUTES).toISOString() : null,
+      service.price_cents,
+      service.currency,
+      JSON.stringify(intake),
+    );
+  } catch (e) {
+    // The overlap trigger fires when someone else grabbed an overlapping slot.
+    if (isDbError(e, "slot_taken")) return error("That time was just taken. Please pick another.", 409);
+    console.error("booking insert failed", e);
     return error("Something went wrong. Please try again.", 500);
   }
 
-  const successUrl = `${siteUrl()}/${trainer.slug}/book/confirmed?booking=${booking.id}`;
+  const successUrl = `${siteUrl()}/${trainer.slug}/book/confirmed?booking=${bookingId}`;
   if (!isPaid) return NextResponse.json({ redirectUrl: successUrl });
 
   try {
@@ -122,16 +119,16 @@ export async function POST(request: NextRequest) {
         transfer_data: { destination: trainer.stripe_account_id! },
         ...(feeBps > 0 ? { application_fee_amount: Math.round((service.price_cents * feeBps) / 10_000) } : {}),
       },
-      metadata: { kind: "booking", booking_id: booking.id },
+      metadata: { kind: "booking", booking_id: bookingId },
       success_url: successUrl,
-      cancel_url: `${siteUrl()}/${trainer.slug}/book?service=${service.id}&cancelled=${booking.id}`,
+      cancel_url: `${siteUrl()}/${trainer.slug}/book?service=${service.id}&cancelled=${bookingId}`,
     });
 
-    await admin.from("bookings").update({ stripe_checkout_session_id: session.id }).eq("id", booking.id);
+    await run("UPDATE bookings SET stripe_checkout_session_id = ? WHERE id = ?", session.id, bookingId);
     return NextResponse.json({ redirectUrl: session.url });
   } catch (e) {
     console.error("checkout session failed", e);
-    await admin.from("bookings").update({ status: "cancelled" }).eq("id", booking.id);
+    await run("UPDATE bookings SET status = 'cancelled' WHERE id = ?", bookingId);
     return error("We couldn't start checkout. Please try again.", 502);
   }
 }

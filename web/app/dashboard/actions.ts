@@ -3,24 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { getUser } from "@/lib/auth/session";
 import { normalizeHex } from "@/lib/brand";
+import { imageUrl } from "@/lib/cms/blocks";
+import { first, isDbError, newId, nowIso, run, setClause } from "@/lib/db";
 import { siteUrl } from "@/lib/env";
 import { hasActiveSubscription, priceIdFor, TRIAL_DAYS } from "@/lib/plans";
 import { stripe } from "@/lib/stripe";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { requireTrainer, RESERVED_SLUGS } from "@/lib/trainer";
+import type { Plan } from "@/lib/types";
 
-const text = (max: number) =>
-  z.string().trim().max(max).transform((v) => v || null);
-const url = z.union([z.literal(""), z.url().max(1000)]).transform((v) => v || null);
+const text = (max: number) => z.string().trim().max(max).transform((v) => v || null);
+const optionalImage = imageUrl.transform((v) => v || null);
+const httpsUrl = z.union([z.literal(""), z.url({ protocol: /^https$/ }).max(500)]).transform((v) => v || null);
 
 function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
 // ---------------------------------------------------------------------------
-// Site
+// Site settings
 // ---------------------------------------------------------------------------
 
 const SiteForm = z.object({
@@ -29,9 +31,9 @@ const SiteForm = z.object({
   headline: text(140),
   bio: text(4000),
   location: text(120),
-  instagram_url: url,
-  logo_url: url,
-  hero_image_url: url,
+  instagram_url: httpsUrl,
+  logo_url: optionalImage,
+  hero_image_url: optionalImage,
   accent_color_hex: z.string().transform((v) => normalizeHex(v)),
   timezone: z.string().refine((tz) => Intl.supportedValuesOf("timeZone").includes(tz) || tz === "UTC", "Unknown timezone"),
   site_published: z.boolean(),
@@ -39,18 +41,17 @@ const SiteForm = z.object({
 
 export async function saveSite(formData: FormData) {
   const trainer = await requireTrainer();
-  const parsed = SiteForm.safeParse({
-    ...Object.fromEntries(formData),
-    site_published: formData.get("site_published") === "on",
-  });
+  const parsed = SiteForm.safeParse({ ...Object.fromEntries(formData), site_published: formData.get("site_published") === "on" });
   if (!parsed.success) fail("/dashboard/site", parsed.error.issues[0].message);
   if (RESERVED_SLUGS.has(parsed.data.slug)) fail("/dashboard/site", "That link is reserved. Try another.");
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("trainers").update(parsed.data).eq("id", trainer.id);
-  if (error?.code === "23505") fail("/dashboard/site", "That link is taken. Try another.");
-  if (error) fail("/dashboard/site", "Couldn't save. Please try again.");
-
+  const { sql, params } = setClause({ ...parsed.data, updated_at: nowIso() });
+  try {
+    await run(`UPDATE trainers SET ${sql} WHERE id = ?`, ...params, trainer.id);
+  } catch (e) {
+    if (isDbError(e, "UNIQUE constraint failed")) fail("/dashboard/site", "That link is taken. Try another.");
+    throw e;
+  }
   revalidatePath("/", "layout");
   redirect("/dashboard/site?saved=1");
 }
@@ -76,24 +77,24 @@ function parseService(formData: FormData) {
 
 export async function createService(formData: FormData) {
   const trainer = await requireTrainer();
-  const supabase = await createClient();
-  const { error } = await supabase.from("services").insert({ ...parseService(formData), trainer_id: trainer.id });
-  if (error) fail("/dashboard/services", "Couldn't add the service.");
+  const s = parseService(formData);
+  await run(
+    "INSERT INTO services (id, trainer_id, name, description, duration_minutes, price_cents, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    newId(), trainer.id, s.name, s.description, s.duration_minutes, s.price_cents, s.active ? 1 : 0,
+  );
   revalidatePath("/", "layout");
 }
 
 export async function updateService(id: string, formData: FormData) {
-  await requireTrainer();
-  const supabase = await createClient();
-  const { error } = await supabase.from("services").update(parseService(formData)).eq("id", id);
-  if (error) fail("/dashboard/services", "Couldn't save the service.");
+  const trainer = await requireTrainer();
+  const { sql, params } = setClause(parseService(formData));
+  await run(`UPDATE services SET ${sql} WHERE id = ? AND trainer_id = ?`, ...params, id, trainer.id);
   revalidatePath("/", "layout");
 }
 
 export async function deleteService(id: string) {
-  await requireTrainer();
-  const supabase = await createClient();
-  await supabase.from("services").delete().eq("id", id);
+  const trainer = await requireTrainer();
+  await run("DELETE FROM services WHERE id = ? AND trainer_id = ?", id, trainer.id);
   revalidatePath("/", "layout");
 }
 
@@ -113,16 +114,17 @@ export async function addAvailability(formData: FormData) {
   const trainer = await requireTrainer();
   const parsed = RuleForm.safeParse(Object.fromEntries(formData));
   if (!parsed.success) fail("/dashboard/availability", parsed.error.issues[0].message);
-  const supabase = await createClient();
-  const { error } = await supabase.from("availability_rules").insert({ ...parsed.data, trainer_id: trainer.id });
-  if (error) fail("/dashboard/availability", "Couldn't add the hours.");
+  const r = parsed.data;
+  await run(
+    "INSERT INTO availability_rules (id, trainer_id, weekday, start_time, end_time) VALUES (?, ?, ?, ?, ?)",
+    newId(), trainer.id, r.weekday, r.start_time, r.end_time,
+  );
   revalidatePath("/dashboard/availability");
 }
 
 export async function deleteAvailability(id: string) {
-  await requireTrainer();
-  const supabase = await createClient();
-  await supabase.from("availability_rules").delete().eq("id", id);
+  const trainer = await requireTrainer();
+  await run("DELETE FROM availability_rules WHERE id = ? AND trainer_id = ?", id, trainer.id);
   revalidatePath("/dashboard/availability");
 }
 
@@ -137,45 +139,39 @@ const QuestionForm = z.object({
   required: z.boolean(),
 });
 
+async function insertQuestion(trainerId: string, q: { label: string; kind: string; options: string[]; required: boolean }) {
+  const next = await first<{ n: number }>("SELECT COUNT(*) AS n FROM intake_questions WHERE trainer_id = ?", trainerId);
+  await run(
+    "INSERT INTO intake_questions (id, trainer_id, label, kind, options, required, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    newId(), trainerId, q.label, q.kind, JSON.stringify(q.options), q.required ? 1 : 0, next?.n ?? 0,
+  );
+}
+
 export async function addQuestion(formData: FormData) {
   const trainer = await requireTrainer();
   const parsed = QuestionForm.safeParse({ ...Object.fromEntries(formData), required: formData.get("required") === "on" });
   if (!parsed.success) fail("/dashboard/intake", parsed.error.issues[0].message);
   const options = parsed.data.options.split(",").map((o) => o.trim()).filter(Boolean);
   if (parsed.data.kind === "select" && options.length < 2) fail("/dashboard/intake", "Add at least two comma-separated options.");
-
-  const supabase = await createClient();
-  const { count } = await supabase.from("intake_questions").select("id", { count: "exact", head: true }).eq("trainer_id", trainer.id);
-  const { error } = await supabase.from("intake_questions").insert({
-    trainer_id: trainer.id,
-    label: parsed.data.label,
-    kind: parsed.data.kind,
-    options: parsed.data.kind === "select" ? options : [],
-    required: parsed.data.required,
-    sort_order: count ?? 0,
-  });
-  if (error) fail("/dashboard/intake", "Couldn't add the question.");
+  await insertQuestion(trainer.id, { ...parsed.data, options: parsed.data.kind === "select" ? options : [] });
   revalidatePath("/dashboard/intake");
 }
 
 export async function addStarterQuestions() {
   const trainer = await requireTrainer();
-  const supabase = await createClient();
-  await supabase.from("intake_questions").insert(
-    [
-      { label: "What are your main goals?", kind: "long_text", required: true },
-      { label: "Any injuries, conditions or medications I should know about?", kind: "long_text", required: true },
-      { label: "Training experience", kind: "select", options: ["New to training", "Some experience", "Experienced"], required: true },
-      { label: "Has a doctor ever advised you not to exercise?", kind: "yes_no", required: true },
-    ].map((q, i) => ({ options: [], ...q, trainer_id: trainer.id, sort_order: i })),
-  );
+  const starter = [
+    { label: "What are your main goals?", kind: "long_text", options: [], required: true },
+    { label: "Any injuries, conditions or medications I should know about?", kind: "long_text", options: [], required: true },
+    { label: "Training experience", kind: "select", options: ["New to training", "Some experience", "Experienced"], required: true },
+    { label: "Has a doctor ever advised you not to exercise?", kind: "yes_no", options: [], required: true },
+  ];
+  for (const q of starter) await insertQuestion(trainer.id, q);
   revalidatePath("/dashboard/intake");
 }
 
 export async function deleteQuestion(id: string) {
-  await requireTrainer();
-  const supabase = await createClient();
-  await supabase.from("intake_questions").delete().eq("id", id);
+  const trainer = await requireTrainer();
+  await run("DELETE FROM intake_questions WHERE id = ? AND trainer_id = ?", id, trainer.id);
   revalidatePath("/dashboard/intake");
 }
 
@@ -184,9 +180,8 @@ export async function deleteQuestion(id: string) {
 // ---------------------------------------------------------------------------
 
 export async function cancelBooking(id: string) {
-  await requireTrainer();
-  const supabase = await createClient();
-  await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id);
+  const trainer = await requireTrainer();
+  await run("UPDATE bookings SET status = 'cancelled' WHERE id = ? AND trainer_id = ?", id, trainer.id);
   revalidatePath("/dashboard");
 }
 
@@ -194,17 +189,16 @@ export async function cancelBooking(id: string) {
 // Billing (trainer → platform) and payouts (client → trainer)
 // ---------------------------------------------------------------------------
 
-export async function startSubscription(plan: "starter" | "pro") {
+export async function startSubscription(plan: Plan) {
   const trainer = await requireTrainer();
   if (hasActiveSubscription(trainer.subscription_status)) return openBillingPortal();
+  const user = await getUser();
 
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: priceIdFor(plan), quantity: 1 }],
     client_reference_id: trainer.id,
-    ...(trainer.stripe_customer_id ? { customer: trainer.stripe_customer_id } : { customer_email: auth.user?.email }),
+    ...(trainer.stripe_customer_id ? { customer: trainer.stripe_customer_id } : { customer_email: user?.email }),
     subscription_data: {
       metadata: { trainer_id: trainer.id },
       // One free trial per trainer: returning customers start paying right away.
@@ -231,17 +225,16 @@ export async function connectStripe() {
   const trainer = await requireTrainer();
   let accountId = trainer.stripe_account_id;
   if (!accountId) {
-    const supabase = await createClient();
-    const { data: auth } = await supabase.auth.getUser();
+    const user = await getUser();
     const account = await stripe().accounts.create({
       type: "express",
-      email: auth.user?.email,
+      email: user?.email,
       business_type: "individual",
       capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
       metadata: { trainer_id: trainer.id },
     });
     accountId = account.id;
-    await createAdminClient().from("trainers").update({ stripe_account_id: accountId }).eq("id", trainer.id);
+    await run("UPDATE trainers SET stripe_account_id = ? WHERE id = ?", accountId, trainer.id);
   }
   const link = await stripe().accountLinks.create({
     account: accountId,

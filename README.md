@@ -1,5 +1,9 @@
 # SWFT Personal Trainer App
 
+> **Current focus: the web platform in [`web/`](web/README.md).** It is a website CMS, booking,
+> payments and dashboard for independent trainers, running on Cloudflare (Workers + D1 + R2) and
+> sold at $29/$49 per month. The iOS app below is paused and still uses Supabase.
+
 Native iOS app (SwiftUI) for a premium, white-label fitness concierge experience. Personal trainers get configurable branding; clients get onboarding, video library, workouts, journaling, and progress tracking.
 
 ## Setup
@@ -36,10 +40,6 @@ Native iOS app (SwiftUI) for a premium, white-label fitness concierge experience
 - **Features/** – Authentication, Onboarding, Dashboard (home), Workouts, Journal, Progress (leaderboard), Trainer dashboard.
 
 See `instructions.md` for product and UX direction and `.cursor/rules/ios-engineering.mdc` for engineering standards.
-
-## Booking + site kit (web)
-
-`web/` is a Next.js app that gives each trainer a branded landing page, online booking, Stripe payments and a client intake form, sold as a $29/$49 monthly plan. It uses the same Supabase project. See `web/README.md`.
 
 ## Trainer web dashboard
 

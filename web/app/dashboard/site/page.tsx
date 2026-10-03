@@ -1,3 +1,5 @@
+import { ImageField } from "@/components/dashboard/ImageField";
+import { getMediaLibrary } from "@/lib/dashboard";
 import { siteUrl } from "@/lib/env";
 import { hasActiveSubscription } from "@/lib/plans";
 import { requireTrainer } from "@/lib/trainer";
@@ -9,12 +11,13 @@ type Props = { searchParams: Promise<{ error?: string; saved?: string }> };
 export default async function SitePage({ searchParams }: Props) {
   const { error, saved } = await searchParams;
   const t = await requireTrainer();
+  const library = await getMediaLibrary(t.id);
   const timeZones = Intl.supportedValuesOf("timeZone");
   const live = t.site_published && hasActiveSubscription(t.subscription_status);
 
   return (
     <>
-      <h1>Your site</h1>
+      <h1>Branding & settings</h1>
       <Notice error={error} success={saved ? "Saved." : undefined} />
       {t.site_published && !live && <p className="notice">Your site goes live once your plan is active (Billing).</p>}
       <form action={saveSite} className="card">
@@ -30,8 +33,8 @@ export default async function SitePage({ searchParams }: Props) {
         <div className="field"><label htmlFor="bio">About you</label><textarea id="bio" name="bio" rows={6} defaultValue={t.bio ?? ""} /></div>
         <div className="field"><label htmlFor="location">Location</label><input id="location" name="location" defaultValue={t.location ?? ""} placeholder="Brooklyn, NY · In person & online" /></div>
         <div className="field"><label htmlFor="instagram_url">Instagram URL</label><input id="instagram_url" name="instagram_url" type="url" defaultValue={t.instagram_url ?? ""} /></div>
-        <div className="field"><label htmlFor="logo_url">Logo image URL</label><input id="logo_url" name="logo_url" type="url" defaultValue={t.logo_url ?? ""} /></div>
-        <div className="field"><label htmlFor="hero_image_url">Cover photo URL</label><input id="hero_image_url" name="hero_image_url" type="url" defaultValue={t.hero_image_url ?? ""} /></div>
+        <div className="field"><ImageField name="logo_url" label="Logo" defaultValue={t.logo_url ?? ""} library={library} /></div>
+        <div className="field"><ImageField name="hero_image_url" label="Cover photo" defaultValue={t.hero_image_url ?? ""} library={library} /></div>
         <div className="field">
           <label htmlFor="accent_color_hex">Brand color</label>
           <input id="accent_color_hex" name="accent_color_hex" type="color" defaultValue={t.accent_color_hex ?? "#1f6f5c"} style={{ width: 64, height: 40, padding: 4 }} />

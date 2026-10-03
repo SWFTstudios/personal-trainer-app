@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { all } from "@/lib/db";
+import { toQuestion } from "@/lib/rows";
 import { requireTrainer } from "@/lib/trainer";
 import type { IntakeQuestion } from "@/lib/types";
 import { addQuestion, addStarterQuestions, deleteQuestion } from "../actions";
@@ -16,9 +17,8 @@ type Props = { searchParams: Promise<{ error?: string }> };
 export default async function IntakePage({ searchParams }: Props) {
   const { error } = await searchParams;
   const trainer = await requireTrainer();
-  const supabase = await createClient();
-  const { data } = await supabase.from("intake_questions").select("*").eq("trainer_id", trainer.id).order("sort_order").order("created_at");
-  const questions = (data ?? []) as IntakeQuestion[];
+  const rows = await all<Parameters<typeof toQuestion>[0]>("SELECT * FROM intake_questions WHERE trainer_id = ? ORDER BY sort_order", trainer.id);
+  const questions: IntakeQuestion[] = rows.map(toQuestion);
 
   return (
     <>
