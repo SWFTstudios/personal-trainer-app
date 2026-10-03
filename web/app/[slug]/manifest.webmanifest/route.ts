@@ -6,7 +6,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   const trainer = await getPublishedTrainer((await params).slug);
   if (!trainer) return new Response("Not found", { status: 404 });
   const name = trainer.display_name ?? "My coach";
-  const accent = accentFor(normalizeHex(trainer.accent_color_hex) ?? DEFAULT_ACCENT, "#f7f7f5");
+  const accent = accentFor(normalizeHex(trainer.accent_color_hex) ?? DEFAULT_ACCENT, "#f2f2ef");
   const icon = trainer.logo_url ?? `/${trainer.slug}/icon`;
   return Response.json(
     {
@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       scope: `/${trainer.slug}/`,
       display: "standalone",
       orientation: "portrait",
-      background_color: trainer.theme_default === "dark" ? "#0e0e11" : "#f7f7f5",
+      background_color: trainer.theme_default === "dark" ? "#0b0b0d" : "#f2f2ef",
       theme_color: accent,
       icons: [
         { src: icon, sizes: "any", purpose: "any" },

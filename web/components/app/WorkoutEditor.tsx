@@ -33,7 +33,7 @@ export function WorkoutEditor({ slug, initial, suggestions, coach }: { slug: str
   }
 
   return (
-    <div className="stack" style={{ paddingBottom: 96 }}>
+    <div className="stack">
       <datalist id="exercise-names">{suggestions.map((s) => <option key={s} value={s} />)}</datalist>
 
       <div className="stack-sm">
@@ -93,14 +93,14 @@ export function WorkoutEditor({ slug, initial, suggestions, coach }: { slug: str
               );
             })}
             <div className="row">
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setExercise(ex.key, { sets: [...ex.sets, { ...ex.sets[ex.sets.length - 1] }] })}>
+              <button type="button" className="btn btn-soft btn-sm" onClick={() => setExercise(ex.key, { sets: [...ex.sets, { ...ex.sets[ex.sets.length - 1] }] })}>
                 <Icon name="plus" /> Add set
               </button>
             </div>
             <input aria-label="Exercise notes" value={ex.notes} onChange={(e) => setExercise(ex.key, { notes: e.target.value })} placeholder="Notes (optional) — form, pain, tempo…" />
           </div>
         ))}
-        <button type="button" className="btn btn-ghost btn-block" onClick={() => set({ exercises: [...w.exercises, blankExercise("", w.exercises.at(-1)?.sets.at(-1)?.unit ?? "lb")] })}>
+        <button type="button" className="btn btn-soft btn-block" onClick={() => set({ exercises: [...w.exercises, blankExercise("", w.exercises.at(-1)?.sets.at(-1)?.unit ?? "lb")] })}>
           <Icon name="plus" /> Add exercise
         </button>
       </section>
@@ -121,8 +121,8 @@ export function WorkoutEditor({ slug, initial, suggestions, coach }: { slug: str
 
       {error && <p className="error" role="alert">{error}</p>}
 
-      <div className="sticky-cta" style={{ display: "flex", gap: 8, position: "fixed", left: 0, right: 0, bottom: "calc(var(--tabbar-h) + env(safe-area-inset-bottom))", margin: 0 }}>
-        <div className="container row" style={{ flexWrap: "nowrap", gap: 8 }}>
+      <div className="save-bar">
+        <div className="row" style={{ flexWrap: "nowrap", gap: 8 }}>
           <button type="button" className="btn btn-ghost" onClick={() => save(false)} disabled={pending}>Save</button>
           <button type="button" className="btn grow" onClick={() => save(true)} disabled={pending}>
             <Icon name="send" /> {pending ? "Sending…" : `Send to ${coach}`}

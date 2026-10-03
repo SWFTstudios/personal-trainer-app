@@ -17,9 +17,9 @@ export function TabBar({ tabs, className = "" }: { tabs: Tab[]; className?: stri
       {tabs.map((t) => {
         const active = t.href === activeHref;
         return (
-          <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined} className={t.primary ? "tab-primary" : undefined}>
-            <span><Icon name={t.icon} /></span>
-            <span>{t.label}</span>
+          <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined} aria-label={t.label} className={t.primary ? "tab-primary" : undefined}>
+            <Icon name={t.icon} />
+            <span className="tab-label">{t.label}</span>
             {!!t.badge && <span className="dot-badge" aria-label={`${t.badge} new`}>{t.badge > 9 ? "9+" : t.badge}</span>}
           </Link>
         );

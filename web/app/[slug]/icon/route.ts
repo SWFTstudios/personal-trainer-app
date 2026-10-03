@@ -7,7 +7,7 @@ const escapeXml = (s: string) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const trainer = await getPublishedTrainer((await params).slug);
   if (!trainer) return new Response("Not found", { status: 404 });
-  const bg = accentFor(normalizeHex(trainer.accent_color_hex) ?? DEFAULT_ACCENT, "#f7f7f5");
+  const bg = accentFor(normalizeHex(trainer.accent_color_hex) ?? DEFAULT_ACCENT, "#f2f2ef");
   const initials = (trainer.display_name ?? "C")
     .split(/\s+/)
     .map((w) => w[0])

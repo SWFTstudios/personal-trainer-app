@@ -58,12 +58,12 @@ export default async function OverviewPage() {
 
       <div className="grid-2">
         <Link href="/dashboard/live" className="card tile">
-          <Icon name="live" style={{ color: "var(--live)" }} />
+          <span className="icon-bubble live"><Icon name="live" /></span>
           <strong>Go live</strong>
           <span className="small muted">Notify {counts?.members ?? 0} member{counts?.members === 1 ? "" : "s"}</span>
         </Link>
         <Link href="/dashboard/workouts" className="card tile">
-          <Icon name="chat" style={{ color: "var(--accent)" }} />
+          <span className="icon-bubble accent"><Icon name="chat" /></span>
           <strong>{counts?.pending ?? 0} to review</strong>
           <span className="small muted">Client workouts</span>
         </Link>
@@ -76,7 +76,7 @@ export default async function OverviewPage() {
           ["App members", String(counts?.members ?? 0)],
           ["Booking clients", String(stats?.clients ?? 0)],
         ].map(([label, value]) => (
-          <div key={label} className="card"><p className="muted small" style={{ margin: 0 }}>{label}</p><p className="stat">{value}</p></div>
+          <div key={label} className="card stat-tile"><span className="stat-label">{label}</span><p className="stat">{value}</p></div>
         ))}
       </div>
 

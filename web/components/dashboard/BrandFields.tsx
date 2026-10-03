@@ -88,8 +88,8 @@ export function BrandFields(props: { accent: string; font: FontStyle; corners: C
       </fieldset>
 
       <div className="row" aria-label="Preview">
-        {preview("#f7f7f5", "#ffffff", "#15151a", "Light")}
-        {preview("#0e0e11", "#17171c", "#f3f3f1", "Dark")}
+        {preview("#f2f2ef", "#ffffff", "#15151a", "Light")}
+        {preview("#0b0b0d", "#17171c", "#f3f3f1", "Dark")}
       </div>
     </div>
   );

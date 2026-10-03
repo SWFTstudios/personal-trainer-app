@@ -58,10 +58,10 @@ describe("brand", () => {
 
   it("keeps the accent at 3:1 contrast in both themes", () => {
     for (const hex of ["#ffffff", "#ffe600", "#000000", "#1f2a44", "#e11d48"]) {
-      expect(contrast(accentFor(hex, "#f7f7f5"), "#f7f7f5")).toBeGreaterThanOrEqual(3);
-      expect(contrast(accentFor(hex, "#0e0e11"), "#0e0e11")).toBeGreaterThanOrEqual(3);
+      expect(contrast(accentFor(hex, "#f2f2ef"), "#f2f2ef")).toBeGreaterThanOrEqual(3);
+      expect(contrast(accentFor(hex, "#0b0b0d"), "#0b0b0d")).toBeGreaterThanOrEqual(3);
     }
-    expect(accentFor("#1f6f5c", "#f7f7f5")).toBe("#1f6f5c"); // already fine: untouched
+    expect(accentFor("#1f6f5c", "#f2f2ef")).toBe("#1f6f5c"); // already fine: untouched
   });
 
   it("picks readable button text and maps style options", () => {

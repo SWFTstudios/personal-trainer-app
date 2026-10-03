@@ -20,7 +20,7 @@ export default async function VideosPage({ params, searchParams }: Props) {
   const browsing = !category && !collection;
 
   return (
-    <div className="container stack page-pad">
+    <div className="container stack-lg page-pad">
       {current ? (
         <div>
           <Link href={base} className="row muted small" style={{ textDecoration: "none", gap: 4 }}><Icon name="back" width={18} height={18} /> Videos</Link>
@@ -34,15 +34,19 @@ export default async function VideosPage({ params, searchParams }: Props) {
 
       {browsing && collections.length > 0 && (
         <section className="stack-sm">
-          <h2 style={{ margin: 0 }}>Programs & series</h2>
-          <div className="video-row">
+          <div className="section-head" style={{ marginBottom: 0 }}><h2>Programs & series</h2></div>
+          <div className="video-row" style={{ gridAutoColumns: "82%" }}>
             {collections.map((c) => (
-              <Link key={c.id} href={`${base}?collection=${c.id}`} className="video-card">
-                <div className="video-thumb">
-                  {c.cover && <img src={c.cover} alt="" loading="lazy" />}
-                  <span className="provider">{c.count} {c.count === 1 ? "video" : "videos"}</span>
+              <Link key={c.id} href={`${base}?collection=${c.id}`} className="media-card" style={{ aspectRatio: "16 / 11" }}>
+                {c.cover ? <img src={c.cover} alt="" loading="lazy" /> : <div className="media-fallback" />}
+                <span className="top-left glass-pill"><Icon name="grid" /> {c.count} {c.count === 1 ? "video" : "videos"}</span>
+                <div className="media-body">
+                  <div className="grow">
+                    <h3 style={{ fontSize: "1.45rem" }}>{c.name}</h3>
+                    {c.description && <div className="meta" style={{ margin: "4px 0 0" }}>{c.description}</div>}
+                  </div>
+                  <span className="round-go" aria-hidden="true"><Icon name="arrow" /></span>
                 </div>
-                <h3>{c.name}</h3>
               </Link>
             ))}
           </div>

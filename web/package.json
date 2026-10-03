@@ -16,6 +16,9 @@
     "vapid": "node scripts/vapid.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/outfit": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
     "@opennextjs/cloudflare": "^1.20.8",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",

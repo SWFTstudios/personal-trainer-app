@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prettyDate, STATUS_CLASS, STATUS_LABEL } from "@/components/app/WorkoutSummary";
 import { Icon } from "@/components/ui/Icon";
+import { Ring } from "@/components/ui/Ring";
 import { getMemberWorkouts } from "@/lib/app-data";
 import { requireMember } from "@/lib/member";
 import { summarize, weekStreak } from "@/lib/workouts";
@@ -18,11 +19,11 @@ export default async function WorkoutsPage({ params }: { params: Promise<{ slug:
     <div className="container stack page-pad">
       <div className="row spread">
         <h1 style={{ margin: 0 }}>Workouts</h1>
-        <Link href={`${base}/new`} className="btn btn-sm"><Icon name="plus" /> Log</Link>
+        <Link href={`${base}/new`} className="btn btn-ink btn-sm"><Icon name="plus" /> Log</Link>
       </div>
       <div className="grid-2">
-        <div className="card"><div className="muted small">This month</div><p className="stat">{thisMonth}</p></div>
-        <div className="card"><div className="muted small">Week streak</div><p className="stat">{weekStreak(workouts.map((w) => w.performed_on), now)} <Icon name="flame" width={20} height={20} style={{ color: "var(--accent)", verticalAlign: "-2px" }} /></p></div>
+        <div className="card stat-tile"><span className="icon-bubble accent"><Icon name="calendar" /></span><span className="stat-label">This month</span><p className="stat">{thisMonth}<small>workouts</small></p></div>
+        <div className="card stat-tile"><span className="icon-bubble accent"><Icon name="flame" /></span><span className="stat-label">Streak</span><p className="stat">{weekStreak(workouts.map((w) => w.performed_on), now)}<small>weeks</small></p></div>
       </div>
       {workouts.length === 0 ? (
         <div className="empty card">
@@ -36,12 +37,16 @@ export default async function WorkoutsPage({ params }: { params: Promise<{ slug:
             const s = summarize(w.exercises);
             return (
               <Link key={w.id} href={`${base}/${w.id}`} className="list-item">
+                <span className="list-thumb"><Icon name="dumbbell" /></span>
                 <div className="grow">
                   <strong>{w.title}</strong>
-                  <div className="small muted">{prettyDate(w.performed_on)} · {s.exercises} exercises · {s.sets} sets</div>
+                  <div className="small muted">{prettyDate(w.performed_on)} · {s.exercises} exercises</div>
+                  <span className={`badge ${STATUS_CLASS[w.status]}`} style={{ marginTop: 6 }}>{STATUS_LABEL[w.status]}</span>
                 </div>
-                <span className={`badge ${STATUS_CLASS[w.status]}`}>{STATUS_LABEL[w.status]}</span>
-                <Icon name="chevron" className="chev" />
+                <Ring value={w.duration_minutes ?? s.sets} max={w.duration_minutes ? 60 : 20} size={54} stroke={4} label={w.duration_minutes ? `${w.duration_minutes} minutes` : `${s.sets} sets`}>
+                  <strong>{w.duration_minutes ?? s.sets}</strong>
+                  <span>{w.duration_minutes ? "min" : "sets"}</span>
+                </Ring>
               </Link>
             );
           })}

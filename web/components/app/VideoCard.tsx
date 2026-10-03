@@ -3,16 +3,19 @@ import { Icon } from "@/components/ui/Icon";
 import { PROVIDER_LABELS } from "@/lib/video";
 import type { Video } from "@/lib/types";
 
-export function VideoCard({ video, href }: { video: Video; href: string }) {
+/** Image-forward video card: thumbnail with gradient, title over the image, round arrow button. */
+export function VideoCard({ video, href, tall = false }: { video: Video; href: string; tall?: boolean }) {
   return (
-    <Link href={href} className="video-card">
-      <div className="video-thumb">
-        {video.thumbnail_url ? <img src={video.thumbnail_url} alt="" loading="lazy" /> : null}
-        <div className="play"><span><Icon name="play" /></span></div>
-        <span className="provider">{PROVIDER_LABELS[video.provider]}</span>
+    <Link href={href} className={`media-card ${tall ? "ratio-tall" : "ratio-video"}`}>
+      {video.thumbnail_url ? <img src={video.thumbnail_url} alt="" loading="lazy" /> : <div className="media-fallback" />}
+      <span className="top-left glass-pill"><Icon name="play" /> {PROVIDER_LABELS[video.provider]}</span>
+      <div className="media-body">
+        <div className="grow">
+          {video.category && <div className="meta">{video.category}</div>}
+          <h3>{video.title}</h3>
+        </div>
+        <span className="round-go" aria-hidden="true"><Icon name="arrow" /></span>
       </div>
-      <h3>{video.title}</h3>
-      {video.category && <p className="muted small" style={{ margin: 0 }}>{video.category}</p>}
     </Link>
   );
 }

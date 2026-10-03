@@ -4,8 +4,8 @@ const HEX = /^#?([0-9a-f]{6})$/i;
 export const DEFAULT_ACCENT = "#1f6f5c";
 
 // Theme backgrounds the accent has to stand out against (keep in sync with globals.css).
-const LIGHT_BG = "#f7f7f5";
-const DARK_BG = "#0e0e11";
+const LIGHT_BG = "#f2f2ef";
+const DARK_BG = "#0b0b0d";
 
 export type FontStyle = "modern" | "editorial" | "athletic";
 export type CornerStyle = "rounded" | "soft" | "sharp";
