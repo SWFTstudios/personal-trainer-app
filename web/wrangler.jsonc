@@ -27,7 +27,7 @@
     }
   ],
   "vars": {
-    "SITE_URL": "https://trainer-kit.example.workers.dev",
+    "SITE_URL": "https://trainer-kit.easy-number.workers.dev",
     "PRODUCT_NAME": "Built By Me EZ",
     "PLATFORM_FEE_BPS": "0"
   }

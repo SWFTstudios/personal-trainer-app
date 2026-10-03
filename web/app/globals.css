@@ -529,3 +529,25 @@ a.list-item:active { transform: scale(0.985); }
 }
 .save-bar .btn { box-shadow: var(--shadow-lg); }
 @media (min-width: 900px) { .dash .save-bar { bottom: 0; margin: 0; padding: 28px 0 12px; } }
+
+/* Availability */
+.hours-summary { display: flex; align-items: center; gap: 14px; }
+.presets { padding: 4px 18px; }
+.presets[open] { padding-bottom: 14px; }
+.presets summary { cursor: pointer; font-weight: 500; min-height: 48px; display: flex; align-items: center; justify-content: space-between; list-style: none; }
+.presets summary::-webkit-details-marker { display: none; }
+.presets summary::after { content: ""; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform 0.2s ease; }
+.presets[open] summary::after { transform: rotate(-135deg); }
+.presets .scroll-x { margin-top: 4px; }
+.day-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.day-card > header { display: flex; align-items: center; gap: 12px; }
+.day-card h2 { margin: 0; font-size: 1.1rem; }
+.day-card.off { background: transparent; box-shadow: none; border-style: dashed; }
+.day-card.off h2 { color: var(--muted); }
+.window { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px; border-radius: var(--radius-pill); background: var(--surface-2); min-height: 54px; }
+.window .icon-btn { background: var(--surface); }
+.add-hours > summary { list-style: none; cursor: pointer; width: 100%; }
+.add-hours > summary::-webkit-details-marker { display: none; }
+.add-hours[open] > summary { margin-bottom: 12px; }
+@media (min-width: 900px) { .day-card { flex-direction: row; flex-wrap: wrap; align-items: center; } .day-card > header { width: 200px; } }
+.presets .chip { background: var(--surface); box-shadow: var(--shadow); }

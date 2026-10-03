@@ -6,7 +6,8 @@ import { z } from "zod";
 import { getUser } from "@/lib/auth/session";
 import { normalizeHex } from "@/lib/brand";
 import { imageUrl } from "@/lib/cms/blocks";
-import { first, isDbError, newId, nowIso, run, setClause } from "@/lib/db";
+import { bindings, first, isDbError, newId, nowIso, run, setClause } from "@/lib/db";
+import { isPresetKey, PRESETS } from "@/lib/availability";
 import { siteUrl } from "@/lib/env";
 import { hasActiveSubscription, priceIdFor, TRIAL_DAYS } from "@/lib/plans";
 import { stripe } from "@/lib/stripe";
@@ -137,6 +138,28 @@ export async function addAvailability(formData: FormData) {
 export async function deleteAvailability(id: string) {
   const trainer = await requireTrainer();
   await run("DELETE FROM availability_rules WHERE id = ? AND trainer_id = ?", id, trainer.id);
+  revalidatePath("/dashboard/availability");
+}
+
+export async function clearAvailabilityDay(weekday: number) {
+  const trainer = await requireTrainer();
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return;
+  await run("DELETE FROM availability_rules WHERE trainer_id = ? AND weekday = ?", trainer.id, weekday);
+  revalidatePath("/dashboard/availability");
+}
+
+/** Replace the whole week with a preset, in one atomic batch. */
+export async function applyAvailabilityPreset(formData: FormData) {
+  const trainer = await requireTrainer();
+  const key = String(formData.get("preset") ?? "");
+  if (!isPresetKey(key)) fail("/dashboard/availability", "Unknown preset.");
+  const { DB } = await bindings();
+  await DB.batch([
+    DB.prepare("DELETE FROM availability_rules WHERE trainer_id = ?").bind(trainer.id),
+    ...PRESETS[key].rules.map((r) =>
+      DB.prepare("INSERT INTO availability_rules (id, trainer_id, weekday, start_time, end_time) VALUES (?, ?, ?, ?, ?)").bind(newId(), trainer.id, r.weekday, r.start_time, r.end_time),
+    ),
+  ]);
   revalidatePath("/dashboard/availability");
 }
 
