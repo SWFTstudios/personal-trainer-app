@@ -1,0 +1,106 @@
+:root {
+  --bg: #fafaf8;
+  --surface: #ffffff;
+  --text: #16161a;
+  --muted: #6b6b76;
+  --border: #e6e5e0;
+  --accent: #1f6f5c;
+  --accent-text: #ffffff;
+  --danger: #b42318;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(20, 20, 30, 0.04), 0 8px 24px rgba(20, 20, 30, 0.06);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111114;
+    --surface: #1a1a1f;
+    --text: #f2f2f0;
+    --muted: #a0a0aa;
+    --border: #2c2c33;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 0.5em; }
+p { margin: 0 0 1em; }
+
+.container { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+.narrow { max-width: 640px; }
+.stack > * + * { margin-top: 16px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.spread { justify-content: space-between; }
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 18px; border-radius: 999px; border: 1px solid transparent;
+  background: var(--accent); color: var(--accent-text);
+  font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-danger { background: transparent; color: var(--danger); border-color: var(--border); }
+.btn-sm { padding: 6px 12px; font-size: 0.875rem; }
+
+label { display: block; font-weight: 500; font-size: 0.925rem; margin-bottom: 6px; }
+input, textarea, select {
+  width: 100%; font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+}
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+input[type="checkbox"] { width: auto; }
+.field + .field { margin-top: 14px; }
+
+.chip {
+  padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; cursor: pointer; white-space: nowrap;
+}
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.scroll-x { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+
+.badge { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); }
+.badge-ok { color: var(--accent); border-color: var(--accent); }
+.error { color: var(--danger); }
+.notice { border-left: 3px solid var(--accent); padding: 10px 14px; background: var(--surface); border-radius: 8px; }
+
+/* Public trainer site */
+.hero { padding: 64px 0 40px; }
+.hero-media { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: var(--radius); margin-top: 24px; }
+.logo { height: 44px; width: auto; border-radius: 8px; }
+.site-footer { padding: 40px 0; text-align: center; }
+
+/* Dashboard */
+.dash { display: grid; grid-template-columns: 220px 1fr; gap: 32px; padding: 32px 16px; max-width: 1100px; margin: 0 auto; }
+.dash-nav { display: flex; flex-direction: column; gap: 4px; }
+.dash-nav a { padding: 8px 12px; border-radius: 8px; text-decoration: none; color: var(--muted); }
+.dash-nav a:hover { background: var(--surface); color: var(--text); }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+@media (max-width: 760px) {
+  .dash { grid-template-columns: 1fr; gap: 16px; }
+  .dash-nav { flex-direction: row; overflow-x: auto; }
+  .table-wrap { overflow-x: auto; }
+}

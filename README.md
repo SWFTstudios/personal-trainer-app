@@ -37,6 +37,10 @@ Native iOS app (SwiftUI) for a premium, white-label fitness concierge experience
 
 See `instructions.md` for product and UX direction and `.cursor/rules/ios-engineering.mdc` for engineering standards.
 
+## Booking + site kit (web)
+
+`web/` is a Next.js app that gives each trainer a branded landing page, online booking, Stripe payments and a client intake form, sold as a $29/$49 monthly plan. It uses the same Supabase project. See `web/README.md`.
+
 ## Trainer web dashboard
 
 For full trainer management (branding, videos, announcements, exercises, client list, journal/completion views), a companion web dashboard is recommended. See `docs/trainer-dashboard.md`.
