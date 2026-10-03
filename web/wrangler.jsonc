@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "trainer-kit",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "trainer-kit",
+      // Replace with the id from `wrangler d1 create trainer-kit`
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      // Trainer-uploaded images for the CMS (served at /media/...)
+      "binding": "MEDIA",
+      "bucket_name": "trainer-kit-media"
+    }
+  ],
+  "vars": {
+    "SITE_URL": "https://trainer-kit.example.workers.dev",
+    "PRODUCT_NAME": "Built By Me EZ",
+    "PLATFORM_FEE_BPS": "0"
+  }
+  // Secrets (wrangler secret put): STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+  // STRIPE_PRICE_STARTER, STRIPE_PRICE_PRO, ADMIN_EMAILS
+}
